@@ -5,6 +5,7 @@ from sqlalchemy import create_engine, pool
 
 from app.database import Base
 from app.identity import models  # noqa: F401 -- Registers identity tables in Base.metadata.
+from app.properties import models as properties_models  # noqa: F401 -- Registers property tables.
 
 
 def run_migrations() -> None:

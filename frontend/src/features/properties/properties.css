@@ -1,0 +1,139 @@
+.admin-workspace {
+  padding-block: 1.25rem 3rem;
+}
+
+.workspace-toolbar,
+.building-page-heading,
+.building-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+}
+
+.workspace-toolbar {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #d9e2dc;
+}
+
+.admin-workspace a {
+  color: #176142;
+  text-underline-offset: 0.2em;
+}
+
+.admin-workspace a:focus-visible {
+  outline: 3px solid #176142;
+  outline-offset: 3px;
+}
+
+.building-page {
+  margin-top: clamp(1.25rem, 5vw, 2.5rem);
+}
+
+.building-page h1 {
+  margin: 0;
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  overflow-wrap: anywhere;
+}
+
+.building-page-heading,
+.building-form-page h1 {
+  margin-bottom: 1rem;
+}
+
+.admin-workspace .button-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  box-sizing: border-box;
+  padding: 0.65rem 0.8rem;
+  border-radius: 0.4rem;
+  background: #15382e;
+  color: #fff;
+  text-decoration: none;
+}
+
+.building-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+  align-items: start;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.building-surface {
+  min-width: 0;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  border: 1px solid #d9e2dc;
+  border-radius: 0.75rem;
+  background: #fff;
+  overflow-wrap: anywhere;
+}
+
+.building-surface h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.15rem;
+}
+
+.building-surface p {
+  margin: 0.5rem 0 0;
+}
+
+.building-details,
+.building-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.building-details {
+  margin: 0;
+}
+
+.building-details dt,
+.building-form label {
+  font-weight: 600;
+}
+
+.building-details dd {
+  margin: 0.25rem 0 0;
+}
+
+.building-form-page {
+  max-width: 48rem;
+}
+
+.building-form fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.building-form legend {
+  margin-bottom: 0.85rem;
+  padding: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.building-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 1rem;
+}
+
+.building-form-grid label {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.building-form-wide {
+  grid-column: 1 / -1;
+}
+
+.building-form-actions {
+  justify-content: flex-start;
+}

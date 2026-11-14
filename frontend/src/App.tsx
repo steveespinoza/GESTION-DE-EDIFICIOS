@@ -4,6 +4,10 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { LoginForm } from './features/identity/LoginForm'
 import { RolePanel } from './features/identity/RolePanel'
 import { getCurrentSession, type SessionUser } from './features/identity/api'
+import { AdminWorkspace } from './features/properties/AdminWorkspace'
+import { BuildingForm } from './features/properties/BuildingForm'
+import { BuildingPage } from './features/properties/BuildingPage'
+import { BuildingsList } from './features/properties/BuildingsList'
 
 type AuthState =
   | { status: 'loading' | 'unavailable' }
@@ -68,9 +72,14 @@ export function App() {
             <Route
               path="/admin"
               element={user?.role === 'SuperAdmin' ? (
-                <RolePanel role="SuperAdmin" onSignedOut={endSession} />
+                <AdminWorkspace onSignedOut={endSession} />
               ) : redirect}
-            />
+            >
+              <Route index element={<BuildingsList />} />
+              <Route path="edificios/nuevo" element={<BuildingForm />} />
+              <Route path="edificios/:buildingId" element={<BuildingPage key="detail" />} />
+              <Route path="edificios/:buildingId/editar" element={<BuildingPage key="edit" editing />} />
+            </Route>
             <Route
               path="/propietario"
               element={user?.role === 'Propietario' ? (
