@@ -6,7 +6,7 @@ El detalle de cada capacidad está en [Requerimientos](requerimientos.md) y [Cas
 
 | ID | Capacidad y criterio de aceptación | Estado |
 | --- | --- | --- |
-| IDE-01 | SuperAdmin y Propietario ingresan con usuario y contraseña, llegan al panel correcto y pueden salir. Las sesiones vencidas pierden acceso. | Pendiente |
+| IDE-01 | SuperAdmin y Propietario ingresan con usuario y contraseña, llegan al panel correcto y pueden salir. Las sesiones vencidas pierden acceso. | Verificado en [API](../backend/tests/test_identity.py) y [navegador](verificacion.md#recorrido-de-identidad). |
 | IDE-02 | El propietario confirma su contraseña vigente al editar el perfil o cambiar la contraseña. El SuperAdmin actualiza datos de un propietario y restablece su contraseña confirmando la propia. | Pendiente |
 | EDI-01 | El SuperAdmin lista, crea, abre y edita edificios. Configura nombre, dirección, capacidad, banco, cuenta, CCI, titular y correo de contacto. | Pendiente |
 | UNI-01 | El SuperAdmin registra unidades con un propietario nuevo o del catálogo. Una cuenta se reutiliza en distintos edificios. La capacidad y la unicidad del identificador se respetan también ante altas simultáneas. | Pendiente |

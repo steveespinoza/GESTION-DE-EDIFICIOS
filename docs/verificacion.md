@@ -6,7 +6,8 @@ La verificación empieza con datos ficticios de dos edificios. Un propietario ti
 
 | Prueba | Requisitos | Resultado esperado |
 | --- | --- | --- |
-| Sesión y perfil | IDE-01, IDE-02 | Cada rol llega a su panel. El cierre o vencimiento de sesión retira el acceso. Una contraseña de confirmación incorrecta conserva los datos anteriores. |
+| Sesión | IDE-01 | Cada rol llega a su panel. El cierre o vencimiento de sesión retira el acceso y la API rechaza el acceso con el rol equivocado. |
+| Perfil | IDE-02 | Una contraseña de confirmación incorrecta conserva los datos anteriores. |
 | Alta simultánea de unidades | EDI-01, UNI-01, UNI-02 | Con una plaza disponible, una sola alta se confirma. El número se mantiene único por edificio y la búsqueda encuentra la ficha por unidad o propietario. |
 | Factura lineal de S/ 100,00 entre tres unidades | FAC-01, FAC-02, FAC-03 | Se crean tres cargos cuya suma es S/ 100,00. Un segundo registro para el mismo servicio y periodo se rechaza. |
 | Factura medida y reinicio del contador | FAC-02, FAC-03 | Se carga la última lectura de ese servicio. El reinicio confirmado conserva la precisión. Con consumo de 120 y volumen declarado de 100, la factura y sus cargos quedan sin registrar. |
@@ -25,3 +26,12 @@ La verificación empieza con datos ficticios de dos edificios. Un propietario ti
 - **Demo.** Preparar la base desde las migraciones y comprobar que la carga y descarga de archivos funciona con acceso temporal. Revisar teclado, foco, pantallas estrechas y estados de carga, vacío y error. Ante un fallo de la API, buscar su identificador de solicitud en los logs y comprobar que no se expongan credenciales.
 
 Las pruebas y sus resultados se enlazarán desde la [matriz de paridad](paridad.md) a medida que se implementen los requisitos.
+
+## Recorrido de identidad
+
+Completar el arranque descrito en el [README](../README.md#desarrollo-local) y usar las dos cuentas de prueba.
+
+1. Abrir `/admin` antes de iniciar sesión. Debe aparecer el formulario de acceso. Probar una contraseña incorrecta y luego entrar como SuperAdmin. Al recargar, el panel permanece abierto.
+2. Cerrar sesión e intentar volver a `/admin`. Debe aparecer el formulario.
+3. Entrar como Propietario y abrir `/admin`. El navegador vuelve a «Mis propiedades» y una solicitud a `/api/admin/session` devuelve `403`.
+4. Comprobar el acceso con una sesión vencida mediante la [suite de API](../backend/tests/test_identity.py). También puede comprobarse en una base aislada fijando una fecha de vencimiento pasada en la sesión de prueba y recargando el panel. La aplicación debe volver al inicio de sesión.

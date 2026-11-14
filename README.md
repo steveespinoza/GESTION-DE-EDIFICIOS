@@ -2,7 +2,7 @@
 
 Aplicación para administrar edificios residenciales, repartir gastos de servicios y consultar estados de cuenta. La administración registra facturas, valida pagos, atiende incidencias y lleva el historial de mantenimiento. Cada propietario puede consultar las unidades asociadas a su cuenta y reportar pagos hechos por un canal externo.
 
-Este proyecto parte de un sistema de gestión inmobiliaria que desarrollé anteriormente. La base incluye el frontend, la API y la configuración local de PostgreSQL. El primer flujo de negocio previsto es el acceso de SuperAdmin y Propietario.
+Este proyecto parte de un sistema de gestión inmobiliaria que desarrollé anteriormente. La primera entrega funcional permite iniciar y cerrar sesión como SuperAdmin o Propietario y entrar al panel de cada rol. La gestión de edificios y unidades se desarrollará a continuación.
 
 ## Arquitectura
 
@@ -23,7 +23,8 @@ cd backend
 cp .env.example .env
 uv sync --locked
 uv run --locked --env-file .env alembic upgrade head
-uv run --locked uvicorn app.main:app --reload
+uv run --locked --env-file .env python -m app.identity.seed_demo
+uv run --locked --env-file .env uvicorn app.main:app --reload
 ```
 
 En PowerShell puedes copiar el archivo con `Copy-Item .env.example .env`. La variable `DATABASE_URL` es la conexión que usa Alembic. Si ya tienes una instancia local de PostgreSQL, configura esa variable para una base de desarrollo y omite el contenedor.
@@ -36,7 +37,9 @@ npm ci
 npm run dev
 ```
 
-Abre [el frontend](http://localhost:5173) para ver el estado de la API. La [ruta de salud](http://127.0.0.1:8000/api/health) responde `{"status":"ok"}` cuando la API está activa. La conexión y el esquema se verifican por separado con Alembic.
+Abre [el formulario de acceso](http://localhost:5173). El comando de datos de prueba crea `admin.demo` y `propietario.demo` y muestra sus contraseñas aleatorias al crearlas. Si se vuelve a ejecutar, conserva las cuentas existentes. Usa esas cuentas en una base local de desarrollo.
+
+La [ruta de salud](http://127.0.0.1:8000/api/health) responde `{"status":"ok"}` cuando la API está activa. La sesión usa una cookie `HttpOnly` y vence a las ocho horas. El archivo de ejemplo desactiva `Secure` para desarrollo por HTTP. Para el despliegue, conserva el valor seguro predeterminado y sirve el frontend y `/api` bajo el mismo origen HTTPS.
 
 ## Comprobaciones
 
@@ -49,13 +52,15 @@ uv run --locked pytest
 uv run --locked --env-file .env alembic check
 ```
 
+Para ejecutar las pruebas de identidad, apunta `TEST_DATABASE_URL` a una base PostgreSQL de pruebas con las migraciones aplicadas. Puedes definir esa variable en un archivo de entorno local y pasarlo a `uv run --locked --env-file ARCHIVO pytest`. Cada prueba revierte sus escrituras. GitHub Actions levanta su propia base para esa suite.
+
 Desde `frontend/`:
 
 ```sh
 npm run build
 ```
 
-GitHub Actions ejecuta estas comprobaciones en los PR. El entorno de migraciones está preparado para incorporar la primera tabla en el módulo de identidad.
+GitHub Actions ejecuta estas comprobaciones en los PR. La primera migración crea los roles, cuentas y sesiones.
 
 ## Documentación
 

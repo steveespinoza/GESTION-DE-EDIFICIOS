@@ -4,6 +4,7 @@ from alembic import context
 from sqlalchemy import create_engine, pool
 
 from app.database import Base
+from app.identity import models  # noqa: F401 -- Registers identity tables in Base.metadata.
 
 
 def run_migrations() -> None:
