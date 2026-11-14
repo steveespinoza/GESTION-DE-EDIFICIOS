@@ -35,6 +35,7 @@ function BuildingRecord({ id, editing }: { id: string; editing: boolean }) {
         <h1 id="building-title">{building.name}</h1>
         <div className="building-form-actions">
           <Link className="button-link" to="unidades">Unidades</Link>
+          <Link to="servicios">Servicios</Link>
           <Link to="editar">Editar edificio</Link>
         </div>
       </div>
