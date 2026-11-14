@@ -1,4 +1,4 @@
-.admin-workspace {
+.property-workspace {
   padding-block: 1.25rem 3rem;
 }
 
@@ -17,12 +17,12 @@
   border-bottom: 1px solid #d9e2dc;
 }
 
-.admin-workspace a {
+.property-workspace a {
   color: #176142;
   text-underline-offset: 0.2em;
 }
 
-.admin-workspace a:focus-visible {
+.property-workspace a:focus-visible {
   outline: 3px solid #176142;
   outline-offset: 3px;
 }
@@ -42,7 +42,7 @@
   margin-bottom: 1rem;
 }
 
-.admin-workspace .button-link {
+.property-workspace .button-link {
   display: inline-flex;
   align-items: center;
   min-height: 2.75rem;
@@ -177,4 +177,19 @@
 
 .owner-fields {
   margin-top: 1rem;
+}
+
+.owner-building {
+  margin-top: 1.5rem;
+}
+
+.owner-building h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+  overflow-wrap: anywhere;
+}
+
+.owner-building > p {
+  margin: 0 0 0.75rem;
+  overflow-wrap: anywhere;
 }

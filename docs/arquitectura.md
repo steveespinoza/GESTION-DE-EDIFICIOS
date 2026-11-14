@@ -54,6 +54,8 @@ El alta de una unidad y el cambio de capacidad bloquean la misma fila del edific
 
 Cada unidad referencia una cuenta de Propietario. Si se crea la cuenta al registrar la unidad, los dos registros se confirman en la misma transacción. Las ediciones del nombre, usuario y datos de contacto se reflejan en las unidades que comparten esa cuenta.
 
+«Mis propiedades» consulta las unidades de la cuenta autenticada. El listado devuelve los datos generales agrupados por edificio. La ficha agrega las instrucciones de pago de ese edificio. Tanto el listado como la ficha filtran por titular en la consulta a la base. Una unidad ajena y un identificador inexistente devuelven la misma respuesta.
+
 ## Modelo de datos conceptual
 
 ```mermaid

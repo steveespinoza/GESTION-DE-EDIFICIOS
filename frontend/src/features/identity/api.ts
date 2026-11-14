@@ -32,21 +32,12 @@ async function readSession(response: Response): Promise<SessionUser> {
   return payload
 }
 
-async function fetchSession(path: string, signal: AbortSignal): Promise<SessionUser | null> {
-  const response = await fetch(path, {
+export async function getCurrentSession(signal: AbortSignal): Promise<SessionUser | null> {
+  const response = await fetch('/api/auth/me', {
     signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]),
   })
   if (response.status === 401) return null
   return readSession(response)
-}
-
-export function getCurrentSession(signal: AbortSignal) {
-  return fetchSession('/api/auth/me', signal)
-}
-
-export function getRoleSession(role: Role, signal: AbortSignal) {
-  const section = role === 'SuperAdmin' ? 'admin' : 'owner'
-  return fetchSession(`/api/${section}/session`, signal)
 }
 
 export async function login(username: string, password: string) {
