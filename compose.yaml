@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: edificios
+      POSTGRES_USER: edificios
+      POSTGRES_PASSWORD: edificios_local
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "edificios", "-d", "edificios"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres_data:

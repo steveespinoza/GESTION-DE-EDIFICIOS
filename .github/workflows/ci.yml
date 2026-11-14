@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: edificios
+          POSTGRES_USER: edificios
+          POSTGRES_PASSWORD: edificios_local
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U edificios -d edificios"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: "0.11.13"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --locked --python 3.13
+      - name: Lint and format
+        run: |
+          uv run --locked ruff check .
+          uv run --locked ruff format --check .
+      - run: uv run --locked pytest
+      - name: Check migrations
+        env:
+          DATABASE_URL: postgresql+psycopg://edificios:edificios_local@127.0.0.1:5432/edificios
+        run: |
+          uv run --locked alembic upgrade head
+          uv run --locked alembic check
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build

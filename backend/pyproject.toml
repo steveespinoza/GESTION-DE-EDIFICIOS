@@ -1,0 +1,25 @@
+[project]
+name = "gestion-de-edificios-api"
+version = "0.1.0"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "alembic>=1.18,<2",
+    "fastapi>=0.136,<1",
+    "psycopg[binary]>=3.2,<4",
+    "sqlalchemy>=2.0,<3",
+    "uvicorn>=0.46,<1",
+]
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.16.0",
+    "pytest>=8,<10",
+    "ruff>=0.15,<1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff.lint]
+extend-select = ["I"]
