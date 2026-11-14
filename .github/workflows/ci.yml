@@ -44,13 +44,16 @@ jobs:
         run: |
           uv run --locked ruff check .
           uv run --locked ruff format --check .
-      - run: uv run --locked pytest
       - name: Check migrations
         env:
           DATABASE_URL: postgresql+psycopg://edificios:edificios_local@127.0.0.1:5432/edificios
         run: |
           uv run --locked alembic upgrade head
           uv run --locked alembic check
+      - name: Run tests
+        env:
+          TEST_DATABASE_URL: postgresql+psycopg://edificios:edificios_local@127.0.0.1:5432/edificios
+        run: uv run --locked pytest
 
   frontend:
     name: Frontend

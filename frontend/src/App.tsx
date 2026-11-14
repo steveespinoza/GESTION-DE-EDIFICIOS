@@ -1,36 +1,48 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { Navigate, Route, Routes } from 'react-router-dom'
 
-const healthMessages = {
-  checking: 'Consultando la API…',
-  available: 'API disponible',
-  unavailable: 'No se pudo conectar con la API',
-} as const
+import { LoginForm } from './features/identity/LoginForm'
+import { RolePanel } from './features/identity/RolePanel'
+import { getCurrentSession, type SessionUser } from './features/identity/api'
 
-type HealthStatus = keyof typeof healthMessages
+type AuthState =
+  | { status: 'loading' | 'unavailable' }
+  | { status: 'ready'; user: SessionUser | null }
 
 export function App() {
-  const [status, setStatus] = useState<HealthStatus>('checking')
+  const [auth, setAuth] = useState<AuthState>({ status: 'loading' })
+  const [attempt, setAttempt] = useState(0)
+  const user = auth.status === 'ready' ? auth.user : null
 
   useEffect(() => {
     const request = new AbortController()
-    const signal = AbortSignal.any([request.signal, AbortSignal.timeout(5000)])
-
-    async function checkHealth() {
-      try {
-        const response = await fetch('/api/health', { signal })
-        const payload: unknown = response.ok ? await response.json() : null
-        const isHealthy =
-          typeof payload === 'object' && payload !== null &&
-          'status' in payload && payload.status === 'ok'
-        setStatus(isHealthy ? 'available' : 'unavailable')
-      } catch {
-        if (!request.signal.aborted) setStatus('unavailable')
-      }
-    }
-
-    void checkHealth()
+    void getCurrentSession(request.signal).then(
+      (session) => {
+        if (!request.signal.aborted) setAuth({ status: 'ready', user: session })
+      },
+      () => {
+        if (!request.signal.aborted) setAuth({ status: 'unavailable' })
+      },
+    )
     return () => request.abort()
-  }, [])
+  }, [attempt])
+
+  const endSession = useCallback(() => setAuth({ status: 'ready', user: null }), [])
+
+  useEffect(() => {
+    if (!user) return
+    const remaining = Date.parse(user.expires_at) - Date.now()
+    const timer = window.setTimeout(endSession, Math.max(remaining, 0))
+    return () => window.clearTimeout(timer)
+  }, [user, endSession])
+
+  function retrySession() {
+    setAuth({ status: 'loading' })
+    setAttempt((previous) => previous + 1)
+  }
+
+  const home = user?.role === 'SuperAdmin' ? '/admin' : '/propietario'
+  const redirect = <Navigate to={user ? home : '/login'} replace />
 
   return (
     <>
@@ -38,12 +50,36 @@ export function App() {
         <div className="shell">Gestión de Edificios</div>
       </header>
       <main className="shell">
-        <section className="status-card" aria-labelledby="status-title">
-          <h1 id="status-title">Estado del servicio</h1>
-          <p className="service-status" data-status={status} role="status">
-            {healthMessages[status]}
-          </p>
-        </section>
+        {auth.status === 'loading' && <p role="status">Comprobando la sesión…</p>}
+        {auth.status === 'unavailable' && (
+          <section className="status-card" aria-labelledby="connection-title">
+            <h1 id="connection-title">No se pudo comprobar la sesión</h1>
+            <button onClick={retrySession}>Volver a intentar</button>
+          </section>
+        )}
+        {auth.status === 'ready' && (
+          <Routes>
+            <Route
+              path="/login"
+              element={user ? redirect : (
+                <LoginForm onSignedIn={(session) => setAuth({ status: 'ready', user: session })} />
+              )}
+            />
+            <Route
+              path="/admin"
+              element={user?.role === 'SuperAdmin' ? (
+                <RolePanel role="SuperAdmin" onSignedOut={endSession} />
+              ) : redirect}
+            />
+            <Route
+              path="/propietario"
+              element={user?.role === 'Propietario' ? (
+                <RolePanel role="Propietario" onSignedOut={endSession} />
+              ) : redirect}
+            />
+            <Route path="*" element={redirect} />
+          </Routes>
+        )}
       </main>
     </>
   )

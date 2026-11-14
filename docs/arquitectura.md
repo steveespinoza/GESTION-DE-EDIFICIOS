@@ -42,6 +42,12 @@ El caso de uso indica qué operación se ejecuta y dónde comienza y termina su 
 
 El frontend se organiza por funcionalidad. OpenAPI será la referencia del contrato HTTP. El backend calcula importes y autoriza operaciones. La interfaz muestra resultados y errores de negocio.
 
+## Inicio y cierre de sesión
+
+La API comprueba las contraseñas con Argon2id. Al iniciar sesión genera un token aleatorio, guarda su huella en PostgreSQL y lo envía en una cookie `HttpOnly` y `SameSite=Strict`. La API comprueba el vencimiento, el estado de la cuenta y el rol en cada acceso protegido. Cerrar sesión elimina el registro y hace que la cookie anterior pierda validez.
+
+El frontend accede a las rutas de sesión bajo el mismo origen. En desarrollo Vite actúa como proxy de `/api`. Las operaciones de inicio y cierre requieren una cabecera de la aplicación para rechazar envíos de formularios externos. En el despliegue, `/api` se servirá bajo el mismo origen HTTPS que el frontend.
+
 ## Modelo de datos conceptual
 
 ```mermaid

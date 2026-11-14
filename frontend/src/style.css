@@ -37,25 +37,55 @@ body {
   line-height: 1.2;
 }
 
-.service-status {
-  display: inline-flex;
-  align-items: center;
+.login-form {
+  display: grid;
   gap: 0.65rem;
-  margin: 0;
-  color: #415850;
 }
 
-.service-status::before {
-  flex: none;
-  width: 0.55rem;
-  height: 0.55rem;
-  border-radius: 50%;
-  background: currentColor;
-  content: '';
+.login-form label {
+  font-weight: 600;
 }
 
-.service-status[data-status='available'] {
-  color: #176142;
+input,
+button {
+  box-sizing: border-box;
+  min-height: 2.75rem;
+  border-radius: 0.4rem;
+  padding: 0.65rem 0.8rem;
+  font: inherit;
+}
+
+input {
+  min-width: 0;
+  border: 1px solid #81958a;
+  color: inherit;
+}
+
+button {
+  width: fit-content;
+  border: 1px solid transparent;
+  background: #15382e;
+  color: #fff;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.login-form button {
+  margin-top: 0.5rem;
+}
+
+input:focus-visible,
+button:focus-visible {
+  outline: 3px solid #176142;
+  outline-offset: 2px;
+}
+
+.form-error {
+  color: #982d2d;
 }
 
 .service-status[data-status='unavailable'] {
