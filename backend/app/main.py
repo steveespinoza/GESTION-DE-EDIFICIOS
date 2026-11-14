@@ -10,6 +10,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.database import configured_engine
 from app.identity.router import router as identity_router
+from app.properties.router import router as properties_router
 
 
 @asynccontextmanager
@@ -25,6 +26,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(title="Gestión de Edificios", version="0.1.0", lifespan=lifespan)
 app.include_router(identity_router)
+app.include_router(properties_router)
 
 
 @app.exception_handler(RequestValidationError)
