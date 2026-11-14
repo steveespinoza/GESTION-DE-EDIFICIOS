@@ -11,6 +11,8 @@ from sqlalchemy.orm import sessionmaker
 from app.database import configured_engine
 from app.identity.router import router as identity_router
 from app.properties.router import router as properties_router
+from app.properties.service import PropertyConflict
+from app.properties.unit_router import router as units_router
 
 
 @asynccontextmanager
@@ -27,6 +29,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(title="Gestión de Edificios", version="0.1.0", lifespan=lifespan)
 app.include_router(identity_router)
 app.include_router(properties_router)
+app.include_router(units_router)
+
+
+@app.exception_handler(PropertyConflict)
+async def property_conflict(_request: Request, error: PropertyConflict) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT, content={"detail": str(error)}
+    )
 
 
 @app.exception_handler(RequestValidationError)

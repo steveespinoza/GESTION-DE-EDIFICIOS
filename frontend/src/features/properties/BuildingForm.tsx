@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useOutletContext } from 'react-router-dom'
 
-import { buildingErrorMessage, BuildingRequestError, saveBuilding, type Building, type BuildingInput } from './api'
+import { buildingErrorMessage, PropertyRequestError, saveBuilding, type Building, type BuildingInput } from './api'
 
 const paymentFields = [
   { name: 'bank_name', label: 'Banco', maxLength: 150 },
@@ -44,7 +44,7 @@ export function BuildingForm({ building }: { building?: Building }) {
       const saved = await saveBuilding(input, building?.id)
       void navigate(`/admin/edificios/${saved.id}`, { replace: true })
     } catch (issue) {
-      if (issue instanceof BuildingRequestError && issue.status === 401) onSessionEnded()
+      if (issue instanceof PropertyRequestError && issue.status === 401) onSessionEnded()
       else setError(buildingErrorMessage(issue, 'No se pudo guardar el edificio. Vuelve a intentarlo.'))
     } finally {
       setSaving(false)

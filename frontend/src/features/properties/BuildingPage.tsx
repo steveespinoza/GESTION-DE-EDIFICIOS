@@ -2,16 +2,16 @@ import { useCallback } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 
 import { BuildingForm } from './BuildingForm'
-import { buildingErrorMessage, BuildingRequestError, readBuilding } from './api'
-import { useBuildingQuery } from './useBuildingQuery'
+import { buildingErrorMessage, PropertyRequestError, readBuilding } from './api'
+import { usePropertyQuery } from './usePropertyQuery'
 
 function BuildingRecord({ id, editing }: { id: string; editing: boolean }) {
   const load = useCallback((signal: AbortSignal) => readBuilding(id, signal), [id])
-  const { query, retry } = useBuildingQuery(load)
+  const { query, retry } = usePropertyQuery(load)
 
   if (query.status === 'loading') return <p role="status">Cargando edificio…</p>
   if (query.status === 'error') {
-    const missing = query.error instanceof BuildingRequestError && query.error.status === 404
+    const missing = query.error instanceof PropertyRequestError && query.error.status === 404
     return (
       <div>
         <p role="alert">{buildingErrorMessage(query.error, 'No se pudo cargar el edificio.')}</p>
@@ -33,7 +33,10 @@ function BuildingRecord({ id, editing }: { id: string; editing: boolean }) {
     <section className="building-page" aria-labelledby="building-title">
       <div className="building-page-heading">
         <h1 id="building-title">{building.name}</h1>
-        <Link className="button-link" to="editar">Editar edificio</Link>
+        <div className="building-form-actions">
+          <Link className="button-link" to="unidades">Unidades</Link>
+          <Link to="editar">Editar edificio</Link>
+        </div>
       </div>
       <div className="building-grid">
         <section className="building-surface" aria-labelledby="general-title">

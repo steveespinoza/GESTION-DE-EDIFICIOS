@@ -2,7 +2,7 @@
 
 Aplicación para administrar edificios residenciales, repartir gastos de servicios y consultar estados de cuenta. La administración registra facturas, valida pagos, atiende incidencias y lleva el historial de mantenimiento. Cada propietario puede consultar las unidades asociadas a su cuenta y reportar pagos hechos por un canal externo.
 
-Este proyecto parte de un sistema de gestión inmobiliaria que desarrollé anteriormente. SuperAdmin y Propietario pueden iniciar sesión y acceder a su panel. Desde «Edificios», el SuperAdmin puede registrar y editar edificios, incluida su capacidad y sus instrucciones de pago. El padrón de unidades se incorporará en la siguiente entrega.
+Este proyecto parte de un sistema de gestión inmobiliaria que desarrollé anteriormente. SuperAdmin y Propietario pueden iniciar sesión y acceder a su panel. Desde «Edificios», el SuperAdmin configura la capacidad y las instrucciones de pago, administra el padrón de unidades y vincula una misma cuenta de propietario a varios edificios. La consulta de unidades desde «Mis propiedades» se incorporará en la siguiente entrega.
 
 ## Arquitectura
 
@@ -52,7 +52,7 @@ uv run --locked pytest
 uv run --locked --env-file .env alembic check
 ```
 
-Para ejecutar las pruebas de identidad y edificios, apunta `TEST_DATABASE_URL` a una base PostgreSQL de pruebas con las migraciones aplicadas. Puedes definir esa variable en un archivo de entorno local y pasarlo a `uv run --locked --env-file ARCHIVO pytest`. Cada prueba revierte sus escrituras. GitHub Actions levanta su propia base para esa suite.
+Para ejecutar las pruebas de integración, apunta `TEST_DATABASE_URL` a una base PostgreSQL de pruebas con las migraciones aplicadas. Puedes definir esa variable en un archivo de entorno local y pasarlo a `uv run --locked --env-file ARCHIVO pytest`. La suite elimina sus datos de prueba y GitHub Actions levanta su propia base.
 
 Desde `frontend/`:
 
@@ -60,7 +60,7 @@ Desde `frontend/`:
 npm run build
 ```
 
-GitHub Actions ejecuta estas comprobaciones en los PR. Las migraciones crean los roles, las cuentas, las sesiones y los edificios.
+GitHub Actions ejecuta estas comprobaciones en los PR. Las migraciones crean los roles, las cuentas, las sesiones, los edificios y las unidades.
 
 ## Documentación
 

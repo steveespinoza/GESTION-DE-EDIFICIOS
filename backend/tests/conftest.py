@@ -96,3 +96,9 @@ def sign_in(client, account_password, session_header):
         )
 
     return login
+
+
+@pytest.fixture
+def admin(client, sign_in):
+    assert sign_in("test-admin").status_code == 200
+    return client
