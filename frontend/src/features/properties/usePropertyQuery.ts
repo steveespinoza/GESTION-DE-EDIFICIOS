@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 
-import { BuildingRequestError } from './api'
+import { PropertyRequestError } from './api'
 
-type BuildingQuery<T> =
+type PropertyQuery<T> =
   | { status: 'loading' }
   | { status: 'error'; error: unknown }
   | { status: 'ready'; data: T }
 
-export function useBuildingQuery<T>(load: (signal: AbortSignal) => Promise<T>) {
+export function usePropertyQuery<T>(load: (signal: AbortSignal) => Promise<T>) {
   const onSessionEnded = useOutletContext<() => void>()
-  const [query, setQuery] = useState<BuildingQuery<T>>({ status: 'loading' })
+  const [query, setQuery] = useState<PropertyQuery<T>>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
@@ -21,7 +21,7 @@ export function useBuildingQuery<T>(load: (signal: AbortSignal) => Promise<T>) {
       },
       (error: unknown) => {
         if (controller.signal.aborted) return
-        if (error instanceof BuildingRequestError && error.status === 401) onSessionEnded()
+        if (error instanceof PropertyRequestError && error.status === 401) onSessionEnded()
         else setQuery({ status: 'error', error })
       },
     )

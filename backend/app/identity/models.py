@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Uuid, true
+from sqlalchemy import DateTime, ForeignKey, Index, String, UniqueConstraint, Uuid, true
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -21,10 +21,13 @@ class Role(Base):
 
 class Account(Base):
     __tablename__ = "accounts"
+    __table_args__ = (UniqueConstraint("email", name="uq_accounts_email"),)
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
     username: Mapped[str] = mapped_column(String(100), unique=True)
     full_name: Mapped[str] = mapped_column(String(150))
+    email: Mapped[str | None] = mapped_column(String(254))
+    phone: Mapped[str | None] = mapped_column(String(40))
     password_hash: Mapped[str] = mapped_column(String(255))
     role_name: Mapped[str] = mapped_column(String(24), ForeignKey("roles.name"))
     is_active: Mapped[bool] = mapped_column(default=True, server_default=true())

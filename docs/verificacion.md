@@ -42,3 +42,10 @@ Completar el arranque descrito en el [README](../README.md#desarrollo-local) y u
 1. Entrar como SuperAdmin. En una base vacía, se muestra el listado vacío y el enlace «Nuevo edificio».
 2. Registrar un edificio con capacidad y datos de pago ficticios. Abrir la ficha y confirmar que los campos de cuenta y CCI conservan sus ceros iniciales. Editar la capacidad, borrar un dato opcional y recargar la ficha para confirmar los cambios.
 3. Volver al listado y abrir el edificio por nombre. Tras cerrar sesión y entrar como Propietario, abrir la dirección de la ficha. El navegador debe volver a «Mis propiedades» y la API debe devolver `403`.
+
+## Recorrido de unidades y propietarios
+
+1. Crear dos edificios con capacidad de una unidad. Abrir el padrón del primero y registrar una unidad con una cuenta de propietario nueva.
+2. Registrar otra unidad en el segundo edificio seleccionando la cuenta anterior. Se puede usar el mismo número porque corresponde a otro edificio.
+3. Editar el número y el área físicos de una unidad. Editar el nombre del propietario desde la otra y comprobar que el cambio se muestra en ambos edificios. Buscar por número, nombre o usuario.
+4. Intentar reducir a cero la capacidad de un edificio ocupado. El sistema debe rechazar el cambio y conservar la capacidad registrada. Las [pruebas con PostgreSQL](../backend/tests/test_units.py) también ejecutan dos altas para la última plaza y un alta en paralelo con una reducción de capacidad. Solo una operación se confirma en cada caso.

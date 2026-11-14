@@ -18,12 +18,6 @@ BUILDING = {
 }
 
 
-@pytest.fixture
-def admin(client, sign_in):
-    assert sign_in("test-admin").status_code == 200
-    return client
-
-
 def test_admin_lists_creates_reads_and_updates_a_building(
     admin, session_header, sessions
 ):

@@ -8,6 +8,7 @@ import { AdminWorkspace } from './features/properties/AdminWorkspace'
 import { BuildingForm } from './features/properties/BuildingForm'
 import { BuildingPage } from './features/properties/BuildingPage'
 import { BuildingsList } from './features/properties/BuildingsList'
+import { UnitPage, UnitsList, NewUnitPage } from './features/properties/UnitsPage'
 
 type AuthState =
   | { status: 'loading' | 'unavailable' }
@@ -79,6 +80,11 @@ export function App() {
               <Route path="edificios/nuevo" element={<BuildingForm />} />
               <Route path="edificios/:buildingId" element={<BuildingPage key="detail" />} />
               <Route path="edificios/:buildingId/editar" element={<BuildingPage key="edit" editing />} />
+              <Route path="edificios/:buildingId/unidades" element={<UnitsList />} />
+              <Route path="edificios/:buildingId/unidades/nueva" element={<NewUnitPage />} />
+              <Route path="edificios/:buildingId/unidades/:unitId" element={<UnitPage key="unit" />} />
+              <Route path="edificios/:buildingId/unidades/:unitId/editar" element={<UnitPage key="edit-unit" mode="unit" />} />
+              <Route path="edificios/:buildingId/unidades/:unitId/propietario" element={<UnitPage key="edit-owner" mode="owner" />} />
             </Route>
             <Route
               path="/propietario"

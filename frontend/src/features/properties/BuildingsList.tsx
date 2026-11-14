@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom'
 
 import { buildingErrorMessage, listBuildings } from './api'
-import { useBuildingQuery } from './useBuildingQuery'
+import { usePropertyQuery } from './usePropertyQuery'
 
 export function BuildingsList() {
-  const { query, retry } = useBuildingQuery(listBuildings)
+  const { query, retry } = usePropertyQuery(listBuildings)
 
   return (
     <section className="building-page" aria-labelledby="buildings-title">

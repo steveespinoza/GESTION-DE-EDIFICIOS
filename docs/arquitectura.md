@@ -48,6 +48,12 @@ La API comprueba las contraseñas con Argon2id. Al iniciar sesión genera un tok
 
 El frontend accede a las rutas de sesión bajo el mismo origen. En desarrollo Vite actúa como proxy de `/api`. Las operaciones de inicio y cierre requieren una cabecera de la aplicación para rechazar envíos de formularios externos. En el despliegue, `/api` se servirá bajo el mismo origen HTTPS que el frontend.
 
+## Capacidad y propietarios
+
+El alta de una unidad y el cambio de capacidad bloquean la misma fila del edificio antes de contar las unidades. Así, el segundo cambio espera al primero y comprueba el padrón actualizado. PostgreSQL también exige que el número de unidad sea único dentro de cada edificio.
+
+Cada unidad referencia una cuenta de Propietario. Si se crea la cuenta al registrar la unidad, los dos registros se confirman en la misma transacción. Las ediciones del nombre, usuario y datos de contacto se reflejan en las unidades que comparten esa cuenta.
+
 ## Modelo de datos conceptual
 
 ```mermaid
