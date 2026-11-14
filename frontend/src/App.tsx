@@ -2,12 +2,12 @@ import { useCallback, useEffect, useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 
 import { LoginForm } from './features/identity/LoginForm'
-import { RolePanel } from './features/identity/RolePanel'
 import { getCurrentSession, type SessionUser } from './features/identity/api'
-import { AdminWorkspace } from './features/properties/AdminWorkspace'
+import { PropertyWorkspace } from './features/properties/PropertyWorkspace'
 import { BuildingForm } from './features/properties/BuildingForm'
 import { BuildingPage } from './features/properties/BuildingPage'
 import { BuildingsList } from './features/properties/BuildingsList'
+import { MyProperties, MyUnitPage } from './features/properties/OwnerProperties'
 import { UnitPage, UnitsList, NewUnitPage } from './features/properties/UnitsPage'
 
 type AuthState =
@@ -73,7 +73,7 @@ export function App() {
             <Route
               path="/admin"
               element={user?.role === 'SuperAdmin' ? (
-                <AdminWorkspace onSignedOut={endSession} />
+                <PropertyWorkspace role="SuperAdmin" onSignedOut={endSession} />
               ) : redirect}
             >
               <Route index element={<BuildingsList />} />
@@ -89,9 +89,12 @@ export function App() {
             <Route
               path="/propietario"
               element={user?.role === 'Propietario' ? (
-                <RolePanel role="Propietario" onSignedOut={endSession} />
+                <PropertyWorkspace role="Propietario" onSignedOut={endSession} />
               ) : redirect}
-            />
+            >
+              <Route index element={<MyProperties />} />
+              <Route path="unidades/:unitId" element={<MyUnitPage />} />
+            </Route>
             <Route path="*" element={redirect} />
           </Routes>
         )}

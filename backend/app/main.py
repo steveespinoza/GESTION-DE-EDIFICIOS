@@ -10,6 +10,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.database import configured_engine
 from app.identity.router import router as identity_router
+from app.properties.owner_router import router as owner_properties_router
 from app.properties.router import router as properties_router
 from app.properties.service import PropertyConflict
 from app.properties.unit_router import router as units_router
@@ -30,6 +31,7 @@ app = FastAPI(title="Gestión de Edificios", version="0.1.0", lifespan=lifespan)
 app.include_router(identity_router)
 app.include_router(properties_router)
 app.include_router(units_router)
+app.include_router(owner_properties_router)
 
 
 @app.exception_handler(PropertyConflict)
