@@ -48,6 +48,10 @@ PostgreSQL admite una sola factura por servicio y periodo contable. Cada cargo c
 
 ## Correcciones y recibos
 
-Un cargo abierto puede corregirse conforme a las reglas de facturación. Si el importe ya fue liquidado o trasladado, el ajuste debe quedar vinculado al movimiento original. El estado de cuenta y las exportaciones se reconcilian con esos movimientos. Si se vuelve a emitir un recibo, queda una versión nueva del documento con los datos de emisión del periodo.
+Desde la ficha de una factura abierta, el SuperAdmin puede corregir las fechas de cobertura y el importe. Para una factura medida también puede corregir el volumen y las lecturas compatibles con las facturas vecinas. La corrección conserva el servicio, el periodo contable, los adjuntos y las unidades de la emisión original. Los cargos mantienen su identidad y se recalculan al céntimo dentro de la misma transacción.
 
-Antes de implementar la cobranza se decidirá cómo se ordenan los cargos para aplicar un pago parcial y cuándo trasladar saldos si se omite un mes. El flujo de corrección de periodos liquidados y los datos del Excel de transparencia también quedan pendientes de definición.
+Cada cambio guarda la versión anterior y la nueva, junto con el motivo, la cuenta y la fecha. Si la factura cambió mientras estaba abierta en otra sesión, la API rechaza el guardado y pide recargar la ficha.
+
+La API protege los cargos de una factura marcada con movimientos contables. Cuando se implemente cobranzas, la primera aplicación de un pago confirmado o un arrastre deberá marcar la factura dentro de la misma transacción y bajo el mismo bloqueo de fila que la corrección. Si un cargo ya tiene esos movimientos, la diferencia deberá registrarse como un ajuste vinculado al cargo de origen. El estado de cuenta y las exportaciones se reconciliarán con esos movimientos. Regenerar un recibo crea una nueva versión con los datos de emisión del periodo.
+
+Quedan por definir el orden para aplicar un pago parcial, el tratamiento de meses omitidos, la emisión de ajustes sobre cargos con movimientos y las columnas del Excel de transparencia.

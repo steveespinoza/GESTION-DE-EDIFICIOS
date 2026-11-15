@@ -13,6 +13,7 @@ from app.billing.errors import InvoiceConflict, InvoiceNotFound
 from app.billing.invoice_schemas import (
     AccountingPeriod,
     ChargeDetail,
+    CorrectionDetail,
     InvoiceDetail,
     InvoiceSummary,
     LinearInvoiceInput,
@@ -29,11 +30,13 @@ from app.billing.metering import (
 from app.billing.models import (
     INVOICE_PERIOD_CONSTRAINT,
     CalculationType,
+    InvoiceCorrection,
     MeterReading,
     ServiceCategory,
     ServiceInvoice,
     UnitCharge,
 )
+from app.identity.models import Account
 from app.properties.models import Unit
 from app.properties.service import lock_building
 
@@ -71,6 +74,8 @@ def invoice_detail(
             for charge in charges
         ],
         total_volume=from_milli(volume) if volume is not None else None,
+        revision=invoice.revision,
+        accounting_locked=invoice.accounting_locked_at is not None,
         common_volume=from_milli(
             volume - sum(reading.consumption_milli for reading in readings)
         )
@@ -116,13 +121,22 @@ def list_invoices(db: Session, building_id: UUID) -> list[InvoiceSummary]:
     return [summarize(invoice, category_name) for invoice, category_name in rows]
 
 
-def find_invoice(db: Session, building_id: UUID, invoice_id: UUID) -> InvoiceDetail:
+def scoped_invoice(
+    db: Session, building_id: UUID, invoice_id: UUID, *, read: bool
+) -> tuple[ServiceInvoice, str]:
     row = db.execute(
-        building_invoices(building_id).where(ServiceInvoice.id == invoice_id)
+        building_invoices(building_id)
+        .where(ServiceInvoice.id == invoice_id)
+        .with_for_update(of=ServiceInvoice, read=read)
     ).one_or_none()
     if row is None:
         raise InvoiceNotFound("Factura no encontrada.")
-    invoice, category_name = row
+    return row[0], row[1]
+
+
+def invoice_records(
+    db: Session, invoice: ServiceInvoice
+) -> tuple[Sequence[UnitCharge], Sequence[MeterReading]]:
     charges = db.scalars(
         select(UnitCharge)
         .where(UnitCharge.invoice_id == invoice.id)
@@ -135,7 +149,38 @@ def find_invoice(db: Session, building_id: UUID, invoice_id: UUID) -> InvoiceDet
         if invoice.total_volume_milli is not None
         else ()
     )
-    return invoice_detail(invoice, category_name, charges, readings)
+    return charges, readings
+
+
+def correction_history(db: Session, invoice_id: UUID) -> list[CorrectionDetail]:
+    rows = db.execute(
+        select(
+            InvoiceCorrection.revision,
+            InvoiceCorrection.reason,
+            Account.username,
+            InvoiceCorrection.corrected_at,
+        )
+        .join(Account, Account.id == InvoiceCorrection.corrected_by_id)
+        .where(InvoiceCorrection.invoice_id == invoice_id)
+        .order_by(InvoiceCorrection.revision.desc())
+    )
+    return [
+        CorrectionDetail(
+            revision=revision,
+            reason=reason,
+            corrected_by=username,
+            corrected_at=corrected_at,
+        )
+        for revision, reason, username, corrected_at in rows
+    ]
+
+
+def find_invoice(db: Session, building_id: UUID, invoice_id: UUID) -> InvoiceDetail:
+    invoice, category_name = scoped_invoice(db, building_id, invoice_id, read=True)
+    charges, readings = invoice_records(db, invoice)
+    detail = invoice_detail(invoice, category_name, charges, readings)
+    detail.corrections = correction_history(db, invoice.id)
+    return detail
 
 
 def scoped_category(
@@ -209,7 +254,9 @@ def create_invoice(
         db.flush()
         readings: list[MeterReading] = []
         if isinstance(data, MeteredInvoiceInput):
-            charges, readings = metered_records(db, invoice, units, data)
+            charges, readings = metered_records(
+                db, invoice, units, data, total_cents=invoice.total_cents
+            )
             db.add_all(readings)
         else:
             amounts = split_linear(invoice.total_cents, len(units))

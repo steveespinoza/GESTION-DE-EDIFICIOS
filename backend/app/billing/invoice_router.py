@@ -3,18 +3,20 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.billing import invoices
+from app.billing import corrections, invoices
 from app.billing.invoice_schemas import (
     AccountingPeriod,
     InvoiceDetail,
     InvoiceSummary,
+    LinearInvoiceCorrection,
     LinearInvoiceInput,
+    MeteredInvoiceCorrection,
     MeteredInvoiceInput,
     MeterReadingDefaults,
 )
 from app.dependencies import RequestSession
 from app.identity.models import RoleName
-from app.identity.router import require_role, require_session_header
+from app.identity.router import CurrentUser, require_role, require_session_header
 
 router = APIRouter(
     prefix="/api/admin/buildings/{building_id}/invoices",
@@ -65,6 +67,30 @@ def read_invoice(
     except invoices.InvoiceNotFound as error:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(error)
+        ) from error
+
+
+@router.put(
+    "/{invoice_id}",
+    dependencies=[Depends(require_session_header)],
+    response_model_exclude_none=True,
+)
+def correct_invoice(
+    building_id: UUID,
+    invoice_id: UUID,
+    data: LinearInvoiceCorrection | MeteredInvoiceCorrection,
+    db: RequestSession,
+    user: CurrentUser,
+) -> InvoiceDetail:
+    try:
+        return corrections.correct_invoice(db, building_id, invoice_id, data, user.id)
+    except invoices.InvoiceNotFound as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(error)
+        ) from error
+    except invoices.InvoiceConflict as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(error)
         ) from error
 
 

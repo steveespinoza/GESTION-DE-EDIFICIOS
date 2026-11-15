@@ -1,9 +1,9 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated, Self
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 METER_LIMIT_MILLI = 100_000_000
 MeterValue = Annotated[Decimal, Field(ge=0, lt=100_000, decimal_places=3)]
@@ -14,15 +14,18 @@ class AccountingPeriod(BaseModel):
     billing_month: int = Field(strict=True, ge=1, le=12)
 
 
-class InvoicePeriod(AccountingPeriod):
+class InvoiceDates(BaseModel):
     start_date: date
     end_date: date
 
 
-class LinearInvoiceInput(InvoicePeriod):
+class InvoicePeriod(InvoiceDates, AccountingPeriod):
+    pass
+
+
+class InvoiceValues(InvoiceDates):
     model_config = ConfigDict(extra="forbid")
 
-    category_id: UUID
     total_amount: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
 
     @model_validator(mode="after")
@@ -34,6 +37,10 @@ class LinearInvoiceInput(InvoicePeriod):
         return self
 
 
+class LinearInvoiceInput(InvoiceValues, AccountingPeriod):
+    category_id: UUID
+
+
 class MeterReadingInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -43,9 +50,24 @@ class MeterReadingInput(BaseModel):
     rollover_confirmed: bool = Field(default=False, strict=True)
 
 
-class MeteredInvoiceInput(LinearInvoiceInput):
+class MeteredValues(BaseModel):
     total_volume: Decimal = Field(gt=0, max_digits=12, decimal_places=3)
     readings: list[MeterReadingInput] = Field(min_length=1)
+
+
+class MeteredInvoiceInput(LinearInvoiceInput, MeteredValues):
+    pass
+
+
+class LinearInvoiceCorrection(InvoiceValues):
+    revision: int = Field(strict=True, ge=0)
+    reason: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)
+    ]
+
+
+class MeteredInvoiceCorrection(LinearInvoiceCorrection, MeteredValues):
+    pass
 
 
 class MeterReadingDefaults(BaseModel):
@@ -77,7 +99,17 @@ class ChargeDetail(BaseModel):
     meter: MeteredChargeDetail | None = None
 
 
+class CorrectionDetail(BaseModel):
+    revision: int
+    reason: str
+    corrected_by: str
+    corrected_at: datetime
+
+
 class InvoiceDetail(InvoiceSummary):
     charges: list[ChargeDetail]
     total_volume: Decimal | None = None
     common_volume: Decimal | None = None
+    revision: int
+    accounting_locked: bool
+    corrections: list[CorrectionDetail] = Field(default_factory=list)
