@@ -10,11 +10,11 @@ flowchart LR
     Owner["Propietario"] --> Web
     Web -->|"HTTPS · API REST"| Api["FastAPI · Render Starter"]
     Api -->|"SQLAlchemy · transacciones"| Db[("PostgreSQL · Neon")]
-    Api -->|"Autoriza archivos y genera documentos"| Storage[("S3 · objetos privados")]
-    Web -->|"Carga y descarga con acceso temporal"| Storage
+    Api -->|"Guarda archivos privados y firma descargas"| Storage[("S3 · objetos privados")]
+    Web -->|"Descarga con acceso temporal"| Storage
 ```
 
-La API valida el alcance de cada operación y autoriza los enlaces temporales a S3. PostgreSQL conserva el estado del negocio y las referencias de los archivos. Cada entorno tendrá sus propias credenciales y datos. El esquema se gestionará con Alembic.
+La API recibe las cargas, valida el alcance de cada operación y autoriza los enlaces temporales a S3. PostgreSQL conserva el estado del negocio y las referencias de los archivos. Cada entorno tendrá sus propias credenciales y datos. El esquema se gestiona con Alembic. [Configuración de archivos privados](archivos-s3.md)
 
 ## Responsabilidad de cada módulo
 

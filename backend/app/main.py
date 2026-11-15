@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import sessionmaker
 
+from app.billing.attachment_router import router as attachment_router
 from app.billing.invoice_router import router as invoice_router
 from app.billing.router import router as billing_router
 from app.database import configured_engine
@@ -36,6 +37,7 @@ app.include_router(units_router)
 app.include_router(owner_properties_router)
 app.include_router(billing_router)
 app.include_router(invoice_router)
+app.include_router(attachment_router)
 
 
 @app.exception_handler(PropertyConflict)

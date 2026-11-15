@@ -209,3 +209,17 @@
   display: grid;
   gap: 0.4rem;
 }
+
+.invoice-attachments,
+.invoice-attachment-forms {
+  margin-top: 1rem;
+}
+
+.invoice-attachment-forms label {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.invoice-attachment-forms input {
+  width: 100%;
+}
