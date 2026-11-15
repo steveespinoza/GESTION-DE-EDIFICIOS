@@ -1,10 +1,11 @@
-from datetime import date
+from datetime import date, datetime
 from enum import StrEnum
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
     BigInteger,
     CheckConstraint,
+    DateTime,
     Enum,
     ForeignKey,
     Index,
@@ -13,6 +14,7 @@ from sqlalchemy import (
     Uuid,
     func,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -73,6 +75,7 @@ class ServiceInvoice(Base):
             "total_volume_milli BETWEEN 1 AND 999999999999",
             name="ck_service_invoices_volume",
         ),
+        CheckConstraint("revision >= 0", name="ck_service_invoices_revision"),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
@@ -83,6 +86,29 @@ class ServiceInvoice(Base):
     end_date: Mapped[date]
     total_cents: Mapped[int] = mapped_column(BigInteger)
     total_volume_milli: Mapped[int | None] = mapped_column(BigInteger)
+    revision: Mapped[int] = mapped_column(server_default="0")
+    accounting_locked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
+
+
+class InvoiceCorrection(Base):
+    __tablename__ = "invoice_corrections"
+    __table_args__ = (
+        CheckConstraint("revision > 0", name="ck_invoice_corrections_revision"),
+    )
+
+    invoice_id: Mapped[UUID] = mapped_column(
+        ForeignKey("service_invoices.id"), primary_key=True
+    )
+    revision: Mapped[int] = mapped_column(primary_key=True)
+    corrected_by_id: Mapped[UUID] = mapped_column(ForeignKey("accounts.id"))
+    corrected_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    reason: Mapped[str] = mapped_column(String(500))
+    before: Mapped[dict] = mapped_column(JSONB)
+    after: Mapped[dict] = mapped_column(JSONB)
 
 
 class UnitCharge(Base):

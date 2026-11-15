@@ -158,7 +158,8 @@
   align-self: center;
 }
 
-.building-form select {
+.building-form select,
+.building-form textarea {
   box-sizing: border-box;
   min-width: 0;
   min-height: 2.75rem;
@@ -170,7 +171,8 @@
   font: inherit;
 }
 
-.building-form select:focus-visible {
+.building-form select:focus-visible,
+.building-form textarea:focus-visible {
   outline: 3px solid #176142;
   outline-offset: 2px;
 }
@@ -211,8 +213,18 @@
 }
 
 .invoice-attachments,
+.invoice-corrections,
+.invoice-corrections .building-details,
 .invoice-attachment-forms {
   margin-top: 1rem;
+}
+
+.invoice-corrections h3 {
+  margin: 0;
+}
+
+.invoice-corrections textarea {
+  resize: vertical;
 }
 
 .invoice-attachment-forms label {

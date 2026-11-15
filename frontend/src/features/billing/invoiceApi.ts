@@ -1,14 +1,22 @@
 import { propertyRequest, writeProperty } from '../properties/api'
 
-export interface InvoiceInput {
-  category_id: string
-  billing_year: number
-  billing_month: number
+export interface InvoiceValues {
   start_date: string
   end_date: string
   total_amount: string
   total_volume?: string
   readings?: MeterReadingInput[]
+}
+
+export interface InvoiceInput extends InvoiceValues {
+  category_id: string
+  billing_year: number
+  billing_month: number
+}
+
+export interface CorrectionInput extends InvoiceValues {
+  revision: number
+  reason: string
 }
 
 interface MeterReadingInput {
@@ -29,9 +37,12 @@ interface InvoiceSummary extends Omit<InvoiceInput, 'total_volume' | 'readings'>
   category_name: string
 }
 
-interface InvoiceDetail extends InvoiceSummary {
+export interface InvoiceDetail extends InvoiceSummary {
   total_volume?: string
   common_volume?: string
+  revision: number
+  accounting_locked: boolean
+  corrections: { revision: number; reason: string; corrected_by: string; corrected_at: string }[]
   charges: {
     unit_id: string
     unit_number: string
@@ -58,6 +69,10 @@ export function readInvoice(buildingId: string, invoiceId: string, signal: Abort
 
 export function createInvoice(buildingId: string, input: InvoiceInput) {
   return writeProperty<InvoiceDetail>(endpoint(buildingId), 'POST', input)
+}
+
+export function correctInvoice(buildingId: string, invoiceId: string, input: CorrectionInput) {
+  return writeProperty<InvoiceDetail>(`${endpoint(buildingId)}/${encodeURIComponent(invoiceId)}`, 'PUT', input)
 }
 
 export function readMeterDefaults(

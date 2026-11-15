@@ -117,7 +117,11 @@ def test_invoice_persists_exact_charges_and_unit_number_snapshot(
     )
     assert admin.get(f"{endpoint}/{invoice['id']}").json() == invoice
     assert admin.get(endpoint).json() == [
-        {key: value for key, value in invoice.items() if key != "charges"}
+        {
+            key: value
+            for key, value in invoice.items()
+            if key not in {"charges", "revision", "accounting_locked", "corrections"}
+        }
     ]
 
 

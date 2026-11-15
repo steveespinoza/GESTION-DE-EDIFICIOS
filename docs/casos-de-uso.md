@@ -44,7 +44,8 @@ Si el identificador ya existe en el edificio o se alcanzó la capacidad, la unid
 
 1. Selecciona un servicio del edificio o crea uno y elige su estrategia de reparto.
 2. Indica el periodo, las fechas, el monto y los adjuntos. En un servicio medido indica el volumen, revisa la lectura anterior y registra la actual por unidad. Si corresponde a un reinicio, lo confirma.
-3. El sistema registra la factura y sus cargos. El SuperAdmin consulta el histórico y puede corregir una factura de acuerdo con su situación contable.
+3. El sistema registra la factura y sus cargos. El SuperAdmin abre la ficha desde el historial.
+4. En una factura abierta, corrige los datos y explica el motivo. El sistema vuelve a calcular los cargos de las unidades originales y registra el cambio. Para una factura con movimientos contables, la diferencia requiere un ajuste.
 
 El registro se rechaza si el servicio ya tiene factura para el periodo, si las lecturas corresponden a otro servicio o edificio, o si el consumo total supera el volumen declarado.
 

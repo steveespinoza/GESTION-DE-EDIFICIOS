@@ -4,6 +4,7 @@ import { useNavigate, useOutletContext } from 'react-router-dom'
 import { PropertyRequestError } from '../properties/api'
 import type { ServiceCategory } from './api'
 import { createInvoice, invoicePath } from './invoiceApi'
+import { InvoiceValuesFields, readInvoiceValues } from './InvoiceValuesFields'
 import { MeterFields } from './MeterFields'
 
 const monthFormatter = new Intl.DateTimeFormat('es-PE', { month: 'long', timeZone: 'UTC' })
@@ -36,14 +37,12 @@ export function InvoiceForm({ buildingId, categories }: { buildingId: string; ca
     event.preventDefault()
     const fields = new FormData(event.currentTarget)
     const text = (name: string) => String(fields.get(name) ?? '')
-    const start = text('start_date')
-    const end = text('end_date')
-    if (end < start) {
+    const values = readInvoiceValues(fields)
+    if (values.end_date < values.start_date) {
       setError('La fecha de fin debe ser igual o posterior a la de inicio.')
       return
     }
-    const meterUnits = fields.getAll('meter_unit').map(String)
-    if (metered && meterUnits.length === 0) {
+    if (metered && !values.readings) {
       setError('Carga las lecturas del periodo antes de registrar la factura.')
       return
     }
@@ -54,18 +53,7 @@ export function InvoiceForm({ buildingId, categories }: { buildingId: string; ca
         category_id: text('category_id'),
         billing_year: Number(text('billing_year')),
         billing_month: Number(text('billing_month')),
-        start_date: start,
-        end_date: end,
-        total_amount: text('total_amount'),
-        ...(metered ? {
-          total_volume: text('total_volume'),
-          readings: meterUnits.map((unitId) => ({
-            unit_id: unitId,
-            previous_reading: text(`previous_${unitId}`),
-            current_reading: text(`current_${unitId}`),
-            rollover_confirmed: fields.has(`rollover_${unitId}`),
-          })),
-        } : {}),
+        ...values,
       })
       void navigate(`${invoicePath(buildingId)}/${invoice.id}`)
     } catch (issue) {
@@ -95,12 +83,7 @@ export function InvoiceForm({ buildingId, categories }: { buildingId: string; ca
             </select>
           </label>
           <label>Año contable<input name="billing_year" type="number" min={2020} max={9999} step={1} value={year} onChange={(event) => setYear(event.target.value)} required /></label>
-          <label>Fecha de inicio<input name="start_date" type="date" required /></label>
-          <label>Fecha de fin<input name="end_date" type="date" required /></label>
-          <label className="building-form-wide">
-            Monto total (S/)
-            <input name="total_amount" type="number" min="0.01" max="9999999999.99" step="0.01" inputMode="decimal" required />
-          </label>
+          <InvoiceValuesFields />
         </div>
       </fieldset>
       {metered && (

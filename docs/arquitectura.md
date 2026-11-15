@@ -65,6 +65,8 @@ erDiagram
     EDIFICIO ||--o{ SERVICIO : configura
     SERVICIO ||--o{ FACTURA : recibe
     FACTURA ||--o{ LECTURA : registra
+    FACTURA ||--o{ CORRECCION_FACTURA : conserva
+    CUENTA ||--o{ CORRECCION_FACTURA : registra
     UNIDAD ||--o{ LECTURA : tiene
     FACTURA o|--o{ CARGO : origina
     UNIDAD ||--o{ CARGO : recibe

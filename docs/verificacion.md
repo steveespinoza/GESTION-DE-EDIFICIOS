@@ -12,6 +12,7 @@ La verificación empieza con datos ficticios de dos edificios. Un propietario ti
 | Alta simultánea de unidades | UNI-01, UNI-02 | Con una plaza disponible, una sola alta se confirma. El número se mantiene único por edificio y la búsqueda encuentra la ficha por unidad o propietario. |
 | Factura lineal de S/ 100,00 entre tres unidades | FAC-01, FAC-02, FAC-03 | Se crean tres cargos cuya suma es S/ 100,00. Un segundo registro para el mismo servicio y periodo se rechaza. |
 | Factura medida y reinicio del contador | FAC-02, FAC-03 | Se carga la última lectura de ese servicio. El reinicio confirmado conserva la precisión. Con consumo de 120 y volumen declarado de 100, la factura y sus cargos quedan sin registrar. |
+| Corrección de una factura | FAC-02, FAC-03 | Se conserva el padrón original, el importe cuadra y la revisión deja constancia del cambio. Una revisión desactualizada, una lectura incompatible o una factura con movimientos impiden el guardado. |
 | Pago parcial y cambio de año | COB-01, COB-02 | Un pago de S/ 10,00 sobre S/ 100,00 deja S/ 90,00 de saldo. El arrastre de diciembre a enero referencia su origen. Verificar también pago exacto y excedente. |
 | Confirmación simultánea de un pago | COB-02 | Dos intentos de confirmar la misma operación generan un solo pago y un solo conjunto de aplicaciones. La prueba consulta el estado persistido. |
 | Acceso a datos y archivos | POR-01, DOC-01, ARC-01 | El propietario con dos unidades puede consultar ambas. El otro solo accede a la suya. Los documentos y enlaces temporales siguen el mismo alcance y caducan cuando corresponde. |
@@ -77,3 +78,10 @@ Completar el arranque descrito en el [README](../README.md#desarrollo-local) y u
 2. Intentar guardar consumos individuales de 60,000 m³ para dos unidades con un volumen de factura de 100,000 m³. La API debe rechazar la factura y conservar el historial sin cambios.
 3. Registrar S/ 100,00 por 30,000 m³, con consumos propios de 10,000 y 5,000 m³. El volumen común es 15,000 m³ y los cargos son S/ 58,33 y S/ 41,67.
 4. Abrir el periodo siguiente y comprobar que se precarga la lectura anterior del servicio correcto. Una lectura actual menor exige confirmar la vuelta a cero. Al abrir la ficha, se muestran la lectura anterior, la actual y el desglose de consumos.
+
+## Recorrido de corrección de facturas
+
+1. Abrir la ficha de una factura lineal con tres unidades, elegir «Corregir factura» y guardar S/ 100,01 con un motivo. Los cargos suman exactamente S/ 100,01. La ficha conserva sus adjuntos y muestra el motivo en «Correcciones».
+2. Abrir la misma factura en dos pestañas. Guardar un cambio en una y luego intentar guardar en la otra. La API devuelve `409` a la segunda. Recargar la ficha y comprobar que muestra la corrección que se guardó.
+3. En una factura medida con un periodo posterior registrado, intentar cambiar una lectura final que se usa en la siguiente factura. La API rechaza el cambio. Corregir el monto o un volumen que cubra el consumo y comprobar que se actualiza el reparto.
+4. La [suite con PostgreSQL](../backend/tests/test_invoice_corrections.py) comprueba que una factura marcada con movimientos conserva sus cargos y su historial ante un intento de edición directa.

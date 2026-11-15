@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 
 import { PropertyRequestError, readBuilding } from '../properties/api'
@@ -6,7 +6,8 @@ import { usePropertyQuery } from '../properties/usePropertyQuery'
 import { listServices } from './api'
 import { billingMonths, InvoiceForm } from './InvoiceForm'
 import { InvoiceAttachments } from './InvoiceAttachments'
-import { invoicePath, listInvoices, readInvoice } from './invoiceApi'
+import { InvoiceCorrectionForm } from './InvoiceCorrectionForm'
+import { invoicePath, listInvoices, readInvoice, type InvoiceDetail } from './invoiceApi'
 
 const money = (amount: string) => `S/ ${amount.replace('.', ',')}`
 const volume = (amount: string) => `${amount.replace('.', ',')} m³`
@@ -73,6 +74,51 @@ function InvoiceHistory({ buildingId }: { buildingId: string }) {
   )
 }
 
+function InvoiceContents({ buildingId, initial, reload }: { buildingId: string; initial: InvoiceDetail; reload: () => void }) {
+  const [invoice, setInvoice] = useState(initial)
+  return (
+    <>
+      <div className="building-grid">
+        <section className="building-surface" aria-labelledby="invoice-service-title">
+          <h2 id="invoice-service-title">{invoice.category_name}</h2>
+          <dl className="building-details">
+            <div><dt>Periodo contable</dt><dd>{period(invoice.billing_month, invoice.billing_year)}</dd></div>
+            <div><dt>Fecha de inicio</dt><dd>{invoice.start_date}</dd></div>
+            <div><dt>Fecha de fin</dt><dd>{invoice.end_date}</dd></div>
+            <div><dt>Monto total</dt><dd>{money(invoice.total_amount)}</dd></div>
+            {invoice.total_volume !== undefined && (
+              <div><dt>Volumen de la factura</dt><dd>{volume(invoice.total_volume)}</dd></div>
+            )}
+            {invoice.common_volume !== undefined && (
+              <div><dt>Consumo común</dt><dd>{volume(invoice.common_volume)}</dd></div>
+            )}
+          </dl>
+        </section>
+        <section className="building-surface" aria-labelledby="charges-title">
+          <h2 id="charges-title">Cargos por unidad</h2>
+          <dl className="building-details">
+            {invoice.charges.map((charge) => (
+              <div key={charge.unit_id}>
+                <dt>Unidad {charge.unit_number}</dt>
+                <dd>{money(charge.amount)}</dd>
+                {charge.meter && (
+                  <>
+                    <dd>{volume(charge.meter.previous_reading)} → {volume(charge.meter.current_reading)}{charge.meter.rolled_over && ' · vuelta a cero'}</dd>
+                    <dd>Consumo propio de {volume(charge.meter.consumption)} · {money(charge.meter.own_amount)}</dd>
+                    <dd>Consumo común · {money(charge.meter.common_amount)}</dd>
+                  </>
+                )}
+              </div>
+            ))}
+          </dl>
+        </section>
+      </div>
+      <InvoiceCorrectionForm buildingId={buildingId} invoice={invoice} onSaved={setInvoice} onReload={reload} />
+      <InvoiceAttachments buildingId={buildingId} invoiceId={invoice.id} />
+    </>
+  )
+}
+
 function InvoiceRecord({ buildingId, invoiceId }: { buildingId: string; invoiceId: string }) {
   const load = useCallback((signal: AbortSignal) => readInvoice(buildingId, invoiceId, signal), [buildingId, invoiceId])
   const { query, retry } = usePropertyQuery(load)
@@ -83,44 +129,7 @@ function InvoiceRecord({ buildingId, invoiceId }: { buildingId: string; invoiceI
       <h1 id="invoice-title">Detalle de factura</h1>
       {query.status === 'loading' && <p role="status">Cargando factura…</p>}
       {query.status === 'error' && <LoadError error={query.error} retry={retry} />}
-      {query.status === 'ready' && (
-        <div className="building-grid">
-          <section className="building-surface" aria-labelledby="invoice-service-title">
-            <h2 id="invoice-service-title">{query.data.category_name}</h2>
-            <dl className="building-details">
-              <div><dt>Periodo contable</dt><dd>{period(query.data.billing_month, query.data.billing_year)}</dd></div>
-              <div><dt>Fecha de inicio</dt><dd>{query.data.start_date}</dd></div>
-              <div><dt>Fecha de fin</dt><dd>{query.data.end_date}</dd></div>
-              <div><dt>Monto total</dt><dd>{money(query.data.total_amount)}</dd></div>
-              {query.data.total_volume !== undefined && (
-                <div><dt>Volumen de la factura</dt><dd>{volume(query.data.total_volume)}</dd></div>
-              )}
-              {query.data.common_volume !== undefined && (
-                <div><dt>Consumo común</dt><dd>{volume(query.data.common_volume)}</dd></div>
-              )}
-            </dl>
-          </section>
-          <section className="building-surface" aria-labelledby="charges-title">
-            <h2 id="charges-title">Cargos por unidad</h2>
-            <dl className="building-details">
-              {query.data.charges.map((charge) => (
-                <div key={charge.unit_id}>
-                  <dt>Unidad {charge.unit_number}</dt>
-                  <dd>{money(charge.amount)}</dd>
-                  {charge.meter && (
-                    <>
-                      <dd>{volume(charge.meter.previous_reading)} → {volume(charge.meter.current_reading)}{charge.meter.rolled_over && ' · vuelta a cero'}</dd>
-                      <dd>Consumo propio de {volume(charge.meter.consumption)} · {money(charge.meter.own_amount)}</dd>
-                      <dd>Consumo común · {money(charge.meter.common_amount)}</dd>
-                    </>
-                  )}
-                </div>
-              ))}
-            </dl>
-          </section>
-        </div>
-      )}
-      {query.status === 'ready' && <InvoiceAttachments buildingId={buildingId} invoiceId={invoiceId} />}
+      {query.status === 'ready' && <InvoiceContents buildingId={buildingId} initial={query.data} reload={retry} />}
     </section>
   )
 }

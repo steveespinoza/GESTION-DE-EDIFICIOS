@@ -9,7 +9,7 @@ from app.billing.errors import InvoiceConflict
 from app.billing.invoice_schemas import (
     METER_LIMIT_MILLI,
     AccountingPeriod,
-    MeteredInvoiceInput,
+    MeteredValues,
 )
 from app.billing.models import MeterReading, ServiceInvoice, UnitCharge
 
@@ -55,18 +55,23 @@ def metered_records(
     db: Session,
     invoice: ServiceInvoice,
     units: list[tuple[UUID, str]],
-    data: MeteredInvoiceInput,
+    data: MeteredValues,
+    *,
+    total_cents: int,
 ) -> tuple[list[UnitCharge], list[MeterReading]]:
     inputs = {item.unit_id: item for item in data.readings}
     if len(inputs) != len(data.readings) or inputs.keys() != {
         unit_id for unit_id, _ in units
     }:
         raise InvoiceConflict(
-            "Ingresa exactamente una lectura por unidad del edificio."
+            "Ingresa exactamente una lectura por unidad incluida en la factura."
         )
 
-    previous = neighboring_readings(db, data.category_id, data)
-    following = neighboring_readings(db, data.category_id, data, before=False)
+    period = AccountingPeriod(
+        billing_year=invoice.billing_year, billing_month=invoice.billing_month
+    )
+    previous = neighboring_readings(db, invoice.category_id, period)
+    following = neighboring_readings(db, invoice.category_id, period, before=False)
     readings = []
     for unit_id, number in units:
         entry = inputs[unit_id]
@@ -105,7 +110,7 @@ def metered_records(
             "La suma de consumos individuales supera el volumen de la factura."
         )
 
-    shares = split_metered(invoice.total_cents, total_volume, consumptions)
+    shares = split_metered(total_cents, total_volume, consumptions)
     charges = [
         UnitCharge(
             invoice_id=invoice.id,
