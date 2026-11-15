@@ -2,7 +2,7 @@
 
 Aplicación para administrar edificios residenciales, repartir gastos de servicios y consultar estados de cuenta. La administración registra facturas, valida pagos, atiende incidencias y lleva el historial de mantenimiento. Cada propietario puede consultar las unidades asociadas a su cuenta y reportar pagos hechos por un canal externo.
 
-Este proyecto parte de un sistema de gestión inmobiliaria que desarrollé anteriormente. Desde «Edificios», el SuperAdmin configura la capacidad y las instrucciones de pago, administra el padrón y registra servicios con reparto lineal o por consumo medido. Una misma cuenta de propietario puede tener unidades en varios edificios. En «Mis propiedades», el propietario consulta sus unidades y las instrucciones de pago. La emisión de cargos, los saldos y los estados de cuenta se incorporarán con la facturación y las cobranzas.
+Este proyecto parte de un sistema de gestión inmobiliaria que desarrollé anteriormente. Desde «Edificios», el SuperAdmin administra el padrón y los servicios. Ya puede registrar facturas lineales por periodo y consultar el desglose de cargos por unidad. En «Mis propiedades», el propietario consulta las unidades asociadas a su cuenta y las instrucciones de pago. La facturación por consumo medido y los estados de cuenta se incorporarán en entregas posteriores.
 
 ## Arquitectura
 
@@ -60,7 +60,7 @@ Desde `frontend/`:
 npm run build
 ```
 
-GitHub Actions ejecuta estas comprobaciones en los PR. Las migraciones crean los roles, las cuentas, las sesiones, los edificios, las unidades y los catálogos de servicios.
+GitHub Actions ejecuta estas comprobaciones en los PR. Las migraciones crean las tablas de identidad, propiedades y facturación.
 
 ## Documentación
 
