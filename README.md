@@ -62,6 +62,8 @@ npm run build
 
 GitHub Actions ejecuta estas comprobaciones en los PR. Las migraciones crean las tablas de identidad, propiedades y facturación.
 
+Los adjuntos y comprobantes del proveedor se cargan desde el detalle de la factura. Consulta la [configuración de S3](docs/archivos-s3.md) para habilitar la carga y la descarga en el entorno del backend.
+
 ## Documentación
 
 | Documento | Contenido |

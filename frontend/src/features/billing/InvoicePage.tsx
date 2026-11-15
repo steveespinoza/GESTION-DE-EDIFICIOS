@@ -5,6 +5,7 @@ import { PropertyRequestError, readBuilding } from '../properties/api'
 import { usePropertyQuery } from '../properties/usePropertyQuery'
 import { listServices } from './api'
 import { billingMonths, InvoiceForm } from './InvoiceForm'
+import { InvoiceAttachments } from './InvoiceAttachments'
 import { invoicePath, listInvoices, readInvoice } from './invoiceApi'
 
 const money = (amount: string) => `S/ ${amount.replace('.', ',')}`
@@ -119,6 +120,7 @@ function InvoiceRecord({ buildingId, invoiceId }: { buildingId: string; invoiceI
           </section>
         </div>
       )}
+      {query.status === 'ready' && <InvoiceAttachments buildingId={buildingId} invoiceId={invoiceId} />}
     </section>
   )
 }

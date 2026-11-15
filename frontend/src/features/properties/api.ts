@@ -23,12 +23,12 @@ export class PropertyRequestError extends Error {
   }
 }
 
-export async function propertyRequest<T>(endpoint: string, options: RequestInit): Promise<T> {
-  const timeout = AbortSignal.timeout(10_000)
+export async function propertyRequest<T>(endpoint: string, options: RequestInit, timeoutMs = 10_000): Promise<T> {
+  const timeout = AbortSignal.timeout(timeoutMs)
   const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout
   const response = await fetch(endpoint, { ...options, signal })
   if (!response.ok) {
-    if (response.status === 409) {
+    if ([409, 413, 415, 503].includes(response.status)) {
       const data: { detail?: unknown } | null = await response.json().catch(() => null)
       throw new PropertyRequestError(response.status, typeof data?.detail === 'string' ? data.detail : undefined)
     }
