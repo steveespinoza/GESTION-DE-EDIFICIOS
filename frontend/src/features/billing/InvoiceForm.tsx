@@ -4,6 +4,7 @@ import { useNavigate, useOutletContext } from 'react-router-dom'
 import { PropertyRequestError } from '../properties/api'
 import type { ServiceCategory } from './api'
 import { createInvoice, invoicePath } from './invoiceApi'
+import { MeterFields } from './MeterFields'
 
 const monthFormatter = new Intl.DateTimeFormat('es-PE', { month: 'long', timeZone: 'UTC' })
 export const billingMonths = Array.from({ length: 12 }, (_, index) => ({
@@ -25,6 +26,11 @@ export function InvoiceForm({ buildingId, categories }: { buildingId: string; ca
   const onSessionEnded = useOutletContext<() => void>()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [categoryId, setCategoryId] = useState('')
+  const [month, setMonth] = useState('')
+  const [year, setYear] = useState('')
+  const metered = categories.find((category) => category.id === categoryId)?.calculation_type === 'METERED'
+  const periodReady = Boolean(month) && /^[2-9]\d{3}$/.test(year) && Number(year) >= 2020
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -34,6 +40,11 @@ export function InvoiceForm({ buildingId, categories }: { buildingId: string; ca
     const end = text('end_date')
     if (end < start) {
       setError('La fecha de fin debe ser igual o posterior a la de inicio.')
+      return
+    }
+    const meterUnits = fields.getAll('meter_unit').map(String)
+    if (metered && meterUnits.length === 0) {
+      setError('Carga las lecturas del periodo antes de registrar la factura.')
       return
     }
     setSaving(true)
@@ -46,6 +57,15 @@ export function InvoiceForm({ buildingId, categories }: { buildingId: string; ca
         start_date: start,
         end_date: end,
         total_amount: text('total_amount'),
+        ...(metered ? {
+          total_volume: text('total_volume'),
+          readings: meterUnits.map((unitId) => ({
+            unit_id: unitId,
+            previous_reading: text(`previous_${unitId}`),
+            current_reading: text(`current_${unitId}`),
+            rollover_confirmed: fields.has(`rollover_${unitId}`),
+          })),
+        } : {}),
       })
       void navigate(`${invoicePath(buildingId)}/${invoice.id}`)
     } catch (issue) {
@@ -60,21 +80,21 @@ export function InvoiceForm({ buildingId, categories }: { buildingId: string; ca
     <form className="building-form" onSubmit={submit} aria-busy={saving}>
       <fieldset disabled={saving}>
         <div className="building-form-grid">
-          <label className="building-form-wide">
-            Servicio lineal
-            <select name="category_id" defaultValue="" required>
+          <div className="building-form-wide invoice-service-field">
+            <label htmlFor="invoice-service">Servicio</label>
+            <select id="invoice-service" name="category_id" value={categoryId} onChange={(event) => setCategoryId(event.target.value)} required>
               <option value="" disabled>Selecciona un servicio</option>
               {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
             </select>
-          </label>
+          </div>
           <label>
             Mes contable
-            <select name="billing_month" defaultValue="" required>
+            <select name="billing_month" value={month} onChange={(event) => setMonth(event.target.value)} required>
               <option value="" disabled>Selecciona el mes</option>
               {billingMonths.map((month) => <option key={month.number} value={month.number}>{month.name}</option>)}
             </select>
           </label>
-          <label>Año contable<input name="billing_year" type="number" min={2020} max={9999} step={1} required /></label>
+          <label>Año contable<input name="billing_year" type="number" min={2020} max={9999} step={1} value={year} onChange={(event) => setYear(event.target.value)} required /></label>
           <label>Fecha de inicio<input name="start_date" type="date" required /></label>
           <label>Fecha de fin<input name="end_date" type="date" required /></label>
           <label className="building-form-wide">
@@ -83,6 +103,14 @@ export function InvoiceForm({ buildingId, categories }: { buildingId: string; ca
           </label>
         </div>
       </fieldset>
+      {metered && (
+        <fieldset disabled={saving}>
+          <legend>Lecturas del contador</legend>
+          {periodReady ? (
+            <MeterFields key={`${categoryId}:${year}:${month}`} buildingId={buildingId} categoryId={categoryId} year={year} month={month} />
+          ) : <p>Selecciona el mes y el año contable para cargar las lecturas.</p>}
+        </fieldset>
+      )}
       {error && <p role="alert" className="form-error">{error}</p>}
       <button type="submit" disabled={saving}>{saving ? 'Registrando…' : 'Registrar factura'}</button>
     </form>

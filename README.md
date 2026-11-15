@@ -2,7 +2,7 @@
 
 Aplicación para administrar edificios residenciales, repartir gastos de servicios y consultar estados de cuenta. La administración registra facturas, valida pagos, atiende incidencias y lleva el historial de mantenimiento. Cada propietario puede consultar las unidades asociadas a su cuenta y reportar pagos hechos por un canal externo.
 
-Este proyecto parte de un sistema de gestión inmobiliaria que desarrollé anteriormente. Desde «Edificios», el SuperAdmin administra el padrón y los servicios. Ya puede registrar facturas lineales por periodo y consultar el desglose de cargos por unidad. En «Mis propiedades», el propietario consulta las unidades asociadas a su cuenta y las instrucciones de pago. La facturación por consumo medido y los estados de cuenta se incorporarán en entregas posteriores.
+Este proyecto parte de un sistema de gestión inmobiliaria que desarrollé anteriormente. Desde «Edificios», el SuperAdmin administra el padrón y los servicios, registra facturas lineales o por consumo medido y consulta el desglose de cargos por unidad. En «Mis propiedades», el propietario consulta las unidades asociadas a su cuenta y las instrucciones de pago. Los estados de cuenta se incorporarán en una entrega posterior.
 
 ## Arquitectura
 

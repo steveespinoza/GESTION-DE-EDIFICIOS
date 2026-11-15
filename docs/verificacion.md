@@ -70,3 +70,10 @@ Completar el arranque descrito en el [README](../README.md#desarrollo-local) y u
 2. Registrar una factura de S/ 100,00. Su ficha debe mostrar S/ 33,34 para 001 y S/ 33,33 para cada una de las otras unidades. Recargar y comprobar el mismo desglose.
 3. Volver al historial e intentar registrar otra factura del mismo servicio y periodo. La API devuelve `409` y el historial conserva una sola factura para ese periodo.
 4. En [las pruebas de integración](../backend/tests/test_linear_invoices.py), verificar el estado persistido ante dos altas simultáneas y ante un fallo al guardar los cargos. El fallo revierte tanto la factura como sus cargos.
+
+## Recorrido de facturación por consumo medido
+
+1. Seleccionar un servicio medido, mes y año para cargar una lectura por unidad. En un periodo sin historial se puede indicar la lectura anterior.
+2. Intentar guardar consumos individuales de 60,000 m³ para dos unidades con un volumen de factura de 100,000 m³. La API debe rechazar la factura y conservar el historial sin cambios.
+3. Registrar S/ 100,00 por 30,000 m³, con consumos propios de 10,000 y 5,000 m³. El volumen común es 15,000 m³ y los cargos son S/ 58,33 y S/ 41,67.
+4. Abrir el periodo siguiente y comprobar que se precarga la lectura anterior del servicio correcto. Una lectura actual menor exige confirmar la vuelta a cero. Al abrir la ficha, se muestran la lectura anterior, la actual y el desglose de consumos.

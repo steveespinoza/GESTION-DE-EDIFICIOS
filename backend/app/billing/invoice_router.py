@@ -1,12 +1,16 @@
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.billing import invoices
 from app.billing.invoice_schemas import (
+    AccountingPeriod,
     InvoiceDetail,
     InvoiceSummary,
     LinearInvoiceInput,
+    MeteredInvoiceInput,
+    MeterReadingDefaults,
 )
 from app.dependencies import RequestSession
 from app.identity.models import RoleName
@@ -29,7 +33,30 @@ def list_invoices(building_id: UUID, db: RequestSession) -> list[InvoiceSummary]
         ) from error
 
 
-@router.get("/{invoice_id}")
+@router.get("/meter-readings")
+def meter_readings(
+    building_id: UUID,
+    category_id: UUID,
+    db: RequestSession,
+    billing_year: Annotated[int, Query(ge=2020, le=9999)],
+    billing_month: Annotated[int, Query(ge=1, le=12)],
+) -> list[MeterReadingDefaults]:
+    try:
+        period = AccountingPeriod(
+            billing_year=billing_year, billing_month=billing_month
+        )
+        return invoices.reading_defaults(db, building_id, category_id, period)
+    except invoices.InvoiceNotFound as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(error)
+        ) from error
+    except invoices.InvoiceConflict as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(error)
+        ) from error
+
+
+@router.get("/{invoice_id}", response_model_exclude_none=True)
 def read_invoice(
     building_id: UUID, invoice_id: UUID, db: RequestSession
 ) -> InvoiceDetail:
@@ -45,12 +72,15 @@ def read_invoice(
     "",
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_session_header)],
+    response_model_exclude_none=True,
 )
 def create_invoice(
-    building_id: UUID, data: LinearInvoiceInput, db: RequestSession
+    building_id: UUID,
+    data: LinearInvoiceInput | MeteredInvoiceInput,
+    db: RequestSession,
 ) -> InvoiceDetail:
     try:
-        return invoices.create_linear_invoice(db, building_id, data)
+        return invoices.create_invoice(db, building_id, data)
     except invoices.InvoiceNotFound as error:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(error)

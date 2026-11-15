@@ -9,29 +9,33 @@ from sqlalchemy.orm import Session
 
 from app.billing.allocation import split_linear
 from app.billing.catalog import building_exists
+from app.billing.errors import InvoiceConflict, InvoiceNotFound
 from app.billing.invoice_schemas import (
+    AccountingPeriod,
     ChargeDetail,
     InvoiceDetail,
     InvoiceSummary,
     LinearInvoiceInput,
+    MeteredChargeDetail,
+    MeteredInvoiceInput,
+    MeterReadingDefaults,
+)
+from app.billing.metering import (
+    from_milli,
+    metered_records,
+    neighboring_readings,
+    to_milli,
 )
 from app.billing.models import (
     INVOICE_PERIOD_CONSTRAINT,
     CalculationType,
+    MeterReading,
     ServiceCategory,
     ServiceInvoice,
     UnitCharge,
 )
 from app.properties.models import Unit
 from app.properties.service import lock_building
-
-
-class InvoiceNotFound(Exception):
-    pass
-
-
-class InvoiceConflict(Exception):
-    pass
 
 
 def summarize(invoice: ServiceInvoice, category_name: str) -> InvoiceSummary:
@@ -48,8 +52,13 @@ def summarize(invoice: ServiceInvoice, category_name: str) -> InvoiceSummary:
 
 
 def invoice_detail(
-    invoice: ServiceInvoice, category_name: str, charges: Sequence[UnitCharge]
+    invoice: ServiceInvoice,
+    category_name: str,
+    charges: Sequence[UnitCharge],
+    readings: Sequence[MeterReading] = (),
 ) -> InvoiceDetail:
+    metering = {reading.unit_id: reading for reading in readings}
+    volume = invoice.total_volume_milli
     return InvoiceDetail(
         **summarize(invoice, category_name).model_dump(),
         charges=[
@@ -57,9 +66,31 @@ def invoice_detail(
                 unit_id=charge.unit_id,
                 unit_number=charge.unit_number,
                 amount=Decimal(charge.amount_cents).scaleb(-2),
+                meter=meter_detail(charge, metering.get(charge.unit_id)),
             )
             for charge in charges
         ],
+        total_volume=from_milli(volume) if volume is not None else None,
+        common_volume=from_milli(
+            volume - sum(reading.consumption_milli for reading in readings)
+        )
+        if volume is not None
+        else None,
+    )
+
+
+def meter_detail(
+    charge: UnitCharge, reading: MeterReading | None
+) -> MeteredChargeDetail | None:
+    if reading is None or charge.common_cents is None:
+        return None
+    return MeteredChargeDetail(
+        previous_reading=from_milli(reading.previous_milli),
+        current_reading=from_milli(reading.current_milli),
+        consumption=from_milli(reading.consumption_milli),
+        own_amount=Decimal(charge.amount_cents - charge.common_cents).scaleb(-2),
+        common_amount=Decimal(charge.common_cents).scaleb(-2),
+        rolled_over=reading.current_milli < reading.previous_milli,
     )
 
 
@@ -97,53 +128,106 @@ def find_invoice(db: Session, building_id: UUID, invoice_id: UUID) -> InvoiceDet
         .where(UnitCharge.invoice_id == invoice.id)
         .order_by(func.lower(UnitCharge.unit_number), UnitCharge.unit_id)
     ).all()
-    return invoice_detail(invoice, category_name, charges)
+    readings = (
+        db.scalars(
+            select(MeterReading).where(MeterReading.invoice_id == invoice.id)
+        ).all()
+        if invoice.total_volume_milli is not None
+        else ()
+    )
+    return invoice_detail(invoice, category_name, charges, readings)
 
 
-def create_linear_invoice(
-    db: Session, building_id: UUID, data: LinearInvoiceInput
-) -> InvoiceDetail:
-    # Unit registration holds the same lock until its transaction commits.
-    if lock_building(db, building_id) is None:
-        raise InvoiceNotFound("Edificio no encontrado.")
+def scoped_category(
+    db: Session, building_id: UUID, category_id: UUID
+) -> ServiceCategory:
     category = db.scalar(
         select(ServiceCategory).where(
-            ServiceCategory.id == data.category_id,
+            ServiceCategory.id == category_id,
             ServiceCategory.building_id == building_id,
         )
     )
     if category is None:
         raise InvoiceNotFound("Servicio no encontrado en este edificio.")
-    if category.calculation_type != CalculationType.LINEAR:
-        raise InvoiceConflict("Selecciona un servicio con reparto lineal.")
-    units = db.execute(
+    return category
+
+
+def building_units(db: Session, building_id: UUID) -> list[tuple[UUID, str]]:
+    rows = db.execute(
         select(Unit.id, Unit.number)
         .where(Unit.building_id == building_id)
         .order_by(func.lower(Unit.number), Unit.id)
-    ).all()
+    )
+    return [(unit_id, number) for unit_id, number in rows]
+
+
+def reading_defaults(
+    db: Session, building_id: UUID, category_id: UUID, period: AccountingPeriod
+) -> list[MeterReadingDefaults]:
+    category = scoped_category(db, building_id, category_id)
+    if category.calculation_type != CalculationType.METERED:
+        raise InvoiceConflict("Selecciona un servicio por consumo medido.")
+    readings = neighboring_readings(db, category_id, period)
+    return [
+        MeterReadingDefaults(
+            unit_id=unit_id,
+            unit_number=number,
+            previous_reading=from_milli(readings[unit_id])
+            if unit_id in readings
+            else None,
+        )
+        for unit_id, number in building_units(db, building_id)
+    ]
+
+
+def create_invoice(
+    db: Session, building_id: UUID, data: LinearInvoiceInput | MeteredInvoiceInput
+) -> InvoiceDetail:
+    # Unit registration and invoice issuance serialize on the building.
+    if lock_building(db, building_id) is None:
+        raise InvoiceNotFound("Edificio no encontrado.")
+    category = scoped_category(db, building_id, data.category_id)
+    if isinstance(data, MeteredInvoiceInput) != (
+        category.calculation_type == CalculationType.METERED
+    ):
+        raise InvoiceConflict(
+            "La factura debe coincidir con el tipo de reparto del servicio."
+        )
+    units = building_units(db, building_id)
     if not units:
         raise InvoiceConflict("Registra al menos una unidad antes de emitir cargos.")
 
     invoice = ServiceInvoice(
-        **data.model_dump(exclude={"total_amount"}),
+        **data.model_dump(exclude={"total_amount", "total_volume", "readings"}),
         total_cents=int(data.total_amount.scaleb(2)),
+        total_volume_milli=to_milli(data.total_volume)
+        if isinstance(data, MeteredInvoiceInput)
+        else None,
     )
     try:
         db.add(invoice)
         db.flush()
-        amounts = split_linear(invoice.total_cents, len(units))
-        charges = [
-            UnitCharge(
-                invoice_id=invoice.id,
-                unit_id=unit_id,
-                unit_number=number,
-                amount_cents=amount,
-            )
-            for (unit_id, number), amount in zip(units, amounts, strict=True)
-        ]
+        readings: list[MeterReading] = []
+        if isinstance(data, MeteredInvoiceInput):
+            charges, readings = metered_records(db, invoice, units, data)
+            db.add_all(readings)
+        else:
+            amounts = split_linear(invoice.total_cents, len(units))
+            charges = [
+                UnitCharge(
+                    invoice_id=invoice.id,
+                    unit_id=unit_id,
+                    unit_number=number,
+                    amount_cents=amount,
+                )
+                for (unit_id, number), amount in zip(units, amounts, strict=True)
+            ]
         db.add_all(charges)
-        result = invoice_detail(invoice, category.name, charges)
+        result = invoice_detail(invoice, category.name, charges, readings)
         db.commit()
+    except InvoiceConflict:
+        db.rollback()
+        raise
     except IntegrityError as error:
         db.rollback()
         if (

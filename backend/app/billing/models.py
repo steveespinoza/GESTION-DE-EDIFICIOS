@@ -69,6 +69,10 @@ class ServiceInvoice(Base):
         CheckConstraint(
             "total_cents BETWEEN 1 AND 999999999999", name="ck_service_invoices_total"
         ),
+        CheckConstraint(
+            "total_volume_milli BETWEEN 1 AND 999999999999",
+            name="ck_service_invoices_volume",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
@@ -78,6 +82,7 @@ class ServiceInvoice(Base):
     start_date: Mapped[date]
     end_date: Mapped[date]
     total_cents: Mapped[int] = mapped_column(BigInteger)
+    total_volume_milli: Mapped[int | None] = mapped_column(BigInteger)
 
 
 class UnitCharge(Base):
@@ -88,6 +93,10 @@ class UnitCharge(Base):
             "amount_cents BETWEEN 0 AND 999999999999", name="ck_unit_charges_amount"
         ),
         Index("ix_unit_charges_unit_id", "unit_id"),
+        CheckConstraint(
+            "common_cents BETWEEN 0 AND amount_cents",
+            name="ck_unit_charges_common_amount",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
@@ -95,3 +104,29 @@ class UnitCharge(Base):
     unit_id: Mapped[UUID] = mapped_column(ForeignKey("units.id"))
     unit_number: Mapped[str] = mapped_column(String(60))
     amount_cents: Mapped[int] = mapped_column(BigInteger)
+    common_cents: Mapped[int | None] = mapped_column(BigInteger)
+
+
+class MeterReading(Base):
+    __tablename__ = "meter_readings"
+    __table_args__ = (
+        CheckConstraint(
+            "previous_milli BETWEEN 0 AND 99999999", name="ck_meter_readings_previous"
+        ),
+        CheckConstraint(
+            "current_milli BETWEEN 0 AND 99999999", name="ck_meter_readings_current"
+        ),
+        CheckConstraint(
+            "consumption_milli = CASE WHEN current_milli < previous_milli "
+            "THEN 100000000 + current_milli - previous_milli ELSE current_milli - previous_milli END",
+            name="ck_meter_readings_consumption",
+        ),
+    )
+
+    invoice_id: Mapped[UUID] = mapped_column(
+        ForeignKey("service_invoices.id"), primary_key=True
+    )
+    unit_id: Mapped[UUID] = mapped_column(ForeignKey("units.id"), primary_key=True)
+    previous_milli: Mapped[int]
+    current_milli: Mapped[int]
+    consumption_milli: Mapped[int]
