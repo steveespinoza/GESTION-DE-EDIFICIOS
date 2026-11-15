@@ -28,9 +28,11 @@ sequenceDiagram
 
 ## Reparto de la factura
 
-- **Lineal.** Divide el monto entre las unidades participantes. Si quedan céntimos por distribuir, aplica un orden estable. Una factura de S/ 100,00 repartida entre tres unidades puede generar cargos de S/ 33,34, S/ 33,33 y S/ 33,33. Queda por definir cuál unidad recibe el céntimo adicional.
+- **Lineal.** Divide el importe en céntimos enteros entre las unidades registradas al emitir la factura. Los primeros números de unidad, ordenados como texto sin distinguir mayúsculas, reciben un céntimo adicional hasta agotar el residuo. Si hay empate en ese orden, decide el identificador de la unidad. Por ejemplo, S/ 100,00 entre 001, 002 y 003 genera S/ 33,34, S/ 33,33 y S/ 33,33, respectivamente. Si hay menos céntimos que unidades, se registra un cargo de S/ 0,00 para cada unidad a la que no le corresponde un céntimo.
 - **Medido.** Toma la lectura previa de la unidad para ese servicio y periodo. Calcula el consumo propio a partir de las lecturas y distribuye el volumen restante como consumo común. Las lecturas conservan tres decimales. Un reinicio del contador requiere confirmación.
 - **Cuadre.** La factura y los cargos se registran como una sola operación. Si las lecturas suman 120 y la factura declara un volumen de 100, se deben corregir los datos antes de emitir cargos. La suma final de los cargos debe coincidir al céntimo con el importe de la factura.
+
+PostgreSQL admite una sola factura por servicio y periodo contable. Cada cargo conserva el número de la unidad al emitirlo para que el historial siga mostrando el desglose original si cambia el padrón.
 
 ## Aplicación de pagos
 

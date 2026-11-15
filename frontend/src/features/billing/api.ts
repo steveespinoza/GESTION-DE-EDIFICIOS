@@ -7,7 +7,7 @@ interface ServiceCategoryInput {
   calculation_type: CalculationType
 }
 
-interface ServiceCategory extends ServiceCategoryInput {
+export interface ServiceCategory extends ServiceCategoryInput {
   id: string
   building_id: string
 }

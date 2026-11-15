@@ -63,3 +63,10 @@ Completar el arranque descrito en el [README](../README.md#desarrollo-local) y u
 2. Crear un servicio lineal y uno por consumo medido. Recargar y comprobar el nombre y tipo de reparto de ambos.
 3. Intentar registrar el mismo nombre cambiando las mayúsculas. El catálogo rechaza el duplicado. Abrir otro edificio y comprobar que su catálogo admite ese nombre.
 4. Iniciar sesión como Propietario. Las rutas de consulta y alta del catálogo administrativo devuelven `403`.
+
+## Recorrido de facturación lineal
+
+1. Como SuperAdmin, abrir «Facturas» en un edificio con las unidades 001, 002 y 003 y un servicio lineal.
+2. Registrar una factura de S/ 100,00. Su ficha debe mostrar S/ 33,34 para 001 y S/ 33,33 para cada una de las otras unidades. Recargar y comprobar el mismo desglose.
+3. Volver al historial e intentar registrar otra factura del mismo servicio y periodo. La API devuelve `409` y el historial conserva una sola factura para ese periodo.
+4. En [las pruebas de integración](../backend/tests/test_linear_invoices.py), verificar el estado persistido ante dos altas simultáneas y ante un fallo al guardar los cargos. El fallo revierte tanto la factura como sus cargos.

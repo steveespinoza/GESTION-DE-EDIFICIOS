@@ -36,6 +36,7 @@ function BuildingRecord({ id, editing }: { id: string; editing: boolean }) {
         <div className="building-form-actions">
           <Link className="button-link" to="unidades">Unidades</Link>
           <Link to="servicios">Servicios</Link>
+          <Link to="facturas">Facturas</Link>
           <Link to="editar">Editar edificio</Link>
         </div>
       </div>
