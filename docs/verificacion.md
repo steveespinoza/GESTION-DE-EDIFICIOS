@@ -56,3 +56,10 @@ Completar el arranque descrito en el [README](../README.md#desarrollo-local) y u
 2. Desde administración, asignarle unidades en dos edificios. Asociar otra unidad del mismo edificio a un segundo propietario.
 3. Volver a iniciar sesión con la primera cuenta. Abrir cada grupo de «Mis propiedades» y comprobar su unidad, área, edificio, dirección e instrucciones de pago. Si el edificio aún no tiene instrucciones configuradas, la ficha lo indica.
 4. Abrir la dirección de la unidad ajena. El portal muestra «No se encontró la unidad» y la API responde `404`. Al iniciar sesión como el segundo propietario, este puede abrir su propia ficha.
+
+## Recorrido del catálogo de servicios
+
+1. Como SuperAdmin, abrir «Servicios» desde la ficha de un edificio. Comprobar el mensaje de catálogo vacío.
+2. Crear un servicio lineal y uno por consumo medido. Recargar y comprobar el nombre y tipo de reparto de ambos.
+3. Intentar registrar el mismo nombre cambiando las mayúsculas. El catálogo rechaza el duplicado. Abrir otro edificio y comprobar que su catálogo admite ese nombre.
+4. Iniciar sesión como Propietario. Las rutas de consulta y alta del catálogo administrativo devuelven `403`.

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 
+import { ServiceCatalogPage } from './features/billing/ServiceCatalogPage'
 import { LoginForm } from './features/identity/LoginForm'
 import { getCurrentSession, type SessionUser } from './features/identity/api'
 import { PropertyWorkspace } from './features/properties/PropertyWorkspace'
@@ -80,6 +81,7 @@ export function App() {
               <Route path="edificios/nuevo" element={<BuildingForm />} />
               <Route path="edificios/:buildingId" element={<BuildingPage key="detail" />} />
               <Route path="edificios/:buildingId/editar" element={<BuildingPage key="edit" editing />} />
+              <Route path="edificios/:buildingId/servicios" element={<ServiceCatalogPage />} />
               <Route path="edificios/:buildingId/unidades" element={<UnitsList />} />
               <Route path="edificios/:buildingId/unidades/nueva" element={<NewUnitPage />} />
               <Route path="edificios/:buildingId/unidades/:unitId" element={<UnitPage key="unit" />} />
