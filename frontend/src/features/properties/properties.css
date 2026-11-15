@@ -193,3 +193,19 @@
   margin: 0 0 0.75rem;
   overflow-wrap: anywhere;
 }
+
+.building-form .meter-confirmation {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.meter-confirmation input {
+  min-height: 0;
+}
+
+.invoice-service-field {
+  display: grid;
+  gap: 0.4rem;
+}

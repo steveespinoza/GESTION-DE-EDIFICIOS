@@ -298,7 +298,7 @@ def test_concurrent_invoice_creation_persists_one_invoice_and_its_charges(
             db.connection()
             barrier.wait(timeout=10)
             try:
-                invoices.create_linear_invoice(db, building_id, data)
+                invoices.create_invoice(db, building_id, data)
             except invoices.InvoiceConflict:
                 return False
             return True

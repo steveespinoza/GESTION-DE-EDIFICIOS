@@ -8,6 +8,7 @@ import { billingMonths, InvoiceForm } from './InvoiceForm'
 import { invoicePath, listInvoices, readInvoice } from './invoiceApi'
 
 const money = (amount: string) => `S/ ${amount.replace('.', ',')}`
+const volume = (amount: string) => `${amount.replace('.', ',')} m³`
 const period = (month: number, year: number) => `${billingMonths[month - 1].name} de ${year}`
 
 function LoadError({ error, retry }: { error: unknown; retry: () => void }) {
@@ -44,11 +45,11 @@ function InvoiceHistory({ buildingId }: { buildingId: string }) {
           <p>{query.data.building.name}</p>
           <div className="building-grid">
             <section className="building-surface" aria-labelledby="new-invoice-title">
-              <h2 id="new-invoice-title">Nueva factura lineal</h2>
-              {query.data.services.some((service) => service.calculation_type === 'LINEAR') ? (
-                <InvoiceForm buildingId={buildingId} categories={query.data.services.filter((service) => service.calculation_type === 'LINEAR')} />
+              <h2 id="new-invoice-title">Nueva factura</h2>
+              {query.data.services.length > 0 ? (
+                <InvoiceForm buildingId={buildingId} categories={query.data.services} />
               ) : (
-                <p><Link to={`/admin/edificios/${buildingId}/servicios`}>Registra un servicio lineal</Link> para facturarlo.</p>
+                <p><Link to={`/admin/edificios/${buildingId}/servicios`}>Registra un servicio</Link> para facturarlo.</p>
               )}
             </section>
             <section className="building-surface" aria-labelledby="history-title">
@@ -90,13 +91,29 @@ function InvoiceRecord({ buildingId, invoiceId }: { buildingId: string; invoiceI
               <div><dt>Fecha de inicio</dt><dd>{query.data.start_date}</dd></div>
               <div><dt>Fecha de fin</dt><dd>{query.data.end_date}</dd></div>
               <div><dt>Monto total</dt><dd>{money(query.data.total_amount)}</dd></div>
+              {query.data.total_volume !== undefined && (
+                <div><dt>Volumen de la factura</dt><dd>{volume(query.data.total_volume)}</dd></div>
+              )}
+              {query.data.common_volume !== undefined && (
+                <div><dt>Consumo común</dt><dd>{volume(query.data.common_volume)}</dd></div>
+              )}
             </dl>
           </section>
           <section className="building-surface" aria-labelledby="charges-title">
             <h2 id="charges-title">Cargos por unidad</h2>
             <dl className="building-details">
               {query.data.charges.map((charge) => (
-                <div key={charge.unit_id}><dt>Unidad {charge.unit_number}</dt><dd>{money(charge.amount)}</dd></div>
+                <div key={charge.unit_id}>
+                  <dt>Unidad {charge.unit_number}</dt>
+                  <dd>{money(charge.amount)}</dd>
+                  {charge.meter && (
+                    <>
+                      <dd>{volume(charge.meter.previous_reading)} → {volume(charge.meter.current_reading)}{charge.meter.rolled_over && ' · vuelta a cero'}</dd>
+                      <dd>Consumo propio de {volume(charge.meter.consumption)} · {money(charge.meter.own_amount)}</dd>
+                      <dd>Consumo común · {money(charge.meter.common_amount)}</dd>
+                    </>
+                  )}
+                </div>
               ))}
             </dl>
           </section>

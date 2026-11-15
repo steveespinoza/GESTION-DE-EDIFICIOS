@@ -7,15 +7,42 @@ export interface InvoiceInput {
   start_date: string
   end_date: string
   total_amount: string
+  total_volume?: string
+  readings?: MeterReadingInput[]
 }
 
-interface InvoiceSummary extends InvoiceInput {
+interface MeterReadingInput {
+  unit_id: string
+  previous_reading: string
+  current_reading: string
+  rollover_confirmed: boolean
+}
+
+export interface MeterReadingDefaults {
+  unit_id: string
+  unit_number: string
+  previous_reading: string | null
+}
+
+interface InvoiceSummary extends Omit<InvoiceInput, 'total_volume' | 'readings'> {
   id: string
   category_name: string
 }
 
 interface InvoiceDetail extends InvoiceSummary {
-  charges: { unit_id: string; unit_number: string; amount: string }[]
+  total_volume?: string
+  common_volume?: string
+  charges: {
+    unit_id: string
+    unit_number: string
+    amount: string
+    meter?: Omit<MeterReadingInput, 'unit_id' | 'rollover_confirmed'> & {
+      consumption: string
+      own_amount: string
+      common_amount: string
+      rolled_over: boolean
+    }
+  }[]
 }
 
 export const invoicePath = (buildingId: string) => `/admin/edificios/${buildingId}/facturas`
@@ -31,4 +58,15 @@ export function readInvoice(buildingId: string, invoiceId: string, signal: Abort
 
 export function createInvoice(buildingId: string, input: InvoiceInput) {
   return writeProperty<InvoiceDetail>(endpoint(buildingId), 'POST', input)
+}
+
+export function readMeterDefaults(
+  buildingId: string,
+  categoryId: string,
+  year: string,
+  month: string,
+  signal: AbortSignal,
+) {
+  const params = new URLSearchParams({ category_id: categoryId, billing_year: year, billing_month: month })
+  return propertyRequest<MeterReadingDefaults[]>(`${endpoint(buildingId)}/meter-readings?${params}`, { signal })
 }
