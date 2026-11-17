@@ -3,6 +3,7 @@ import { useOutletContext } from 'react-router-dom'
 
 import { PropertyRequestError } from '../properties/api'
 import { registerPayment, type Payment, type Period } from './api'
+import { PaymentFields, PaymentPeriodFields, readPaymentPeriod, readPaymentValues } from './PaymentFields'
 
 interface Props {
   buildingId: string
@@ -27,11 +28,8 @@ export function PaymentForm({ buildingId, unitId, period, onSaved }: Props) {
     try {
       const payment = await registerPayment(buildingId, unitId, {
         request_id: requestId.current,
-        billing_year: Number(fields.get('billing_year')),
-        billing_month: Number(fields.get('billing_month')),
-        received_on: String(fields.get('received_on')),
-        amount: String(fields.get('amount')),
-        reference: String(fields.get('reference')).trim() || null,
+        ...readPaymentPeriod(fields),
+        ...readPaymentValues(fields),
       })
       onSaved(payment)
     } catch (issue) {
@@ -50,11 +48,8 @@ export function PaymentForm({ buildingId, unitId, period, onSaved }: Props) {
       <form className="building-form" onSubmit={submit} aria-busy={saving}>
         <fieldset className="building-form-grid" disabled={saving}>
           <legend>Aplicar a cargos hasta</legend>
-          <label>Mes contable<input type="number" name="billing_month" min={1} max={12} step={1} defaultValue={period?.billing_month} required /></label>
-          <label>Año contable<input type="number" name="billing_year" min={2020} max={9999} step={1} defaultValue={period?.billing_year} required /></label>
-          <label>Fecha de recepción<input type="date" name="received_on" required /></label>
-          <label>Monto recibido (S/)<input type="number" name="amount" min="0.01" max="9999999999.99" step="0.01" inputMode="decimal" required /></label>
-          <label className="building-form-wide">Referencia (opcional)<input name="reference" maxLength={120} /></label>
+          <PaymentPeriodFields period={period} />
+          <PaymentFields />
         </fieldset>
         <p>Se aplicará primero a los cargos más antiguos. El excedente se registra como crédito.</p>
         {error && <p className="form-error" role="alert">{error}</p>}

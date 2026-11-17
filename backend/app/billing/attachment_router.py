@@ -1,4 +1,3 @@
-from collections.abc import Callable
 from typing import Annotated
 from uuid import UUID
 
@@ -7,43 +6,19 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import RedirectResponse
 
 from app.billing import attachments
-from app.billing.attachment_models import MAX_FILE_BYTES, FileKind
+from app.billing.attachment_models import FileKind
 from app.billing.errors import InvoiceConflict, InvoiceNotFound
 from app.dependencies import RequestSession
 from app.identity.models import RoleName
 from app.identity.router import require_role, require_session_header
-from app.storage.files import FileStorage, StorageUnavailable
-from app.storage.s3 import storage_factory
+from app.storage.files import InvalidAttachment, StorageUnavailable
+from app.storage.http import StorageFactory, private_download, read_body
 
 router = APIRouter(
     prefix="/api/admin/buildings/{building_id}/invoices/{invoice_id}/attachments",
     tags=["Archivos de factura"],
     dependencies=[Depends(require_role(RoleName.SUPERADMIN))],
 )
-StorageFactory = Annotated[Callable[[], FileStorage], Depends(storage_factory)]
-
-
-def attachment_too_large() -> HTTPException:
-    return HTTPException(
-        status_code=413, detail="El archivo supera el límite de 10 MiB."
-    )
-
-
-async def read_body(request: Request) -> bytes:
-    length = request.headers.get("content-length")
-    if length is not None and length.isascii() and length.isdecimal():
-        digits = length.lstrip("0") or "0"
-        if len(digits) > 8 or int(digits) > MAX_FILE_BYTES:
-            raise attachment_too_large()
-
-    body = bytearray()
-    async for chunk in request.stream():
-        if len(body) + len(chunk) > MAX_FILE_BYTES:
-            raise attachment_too_large()
-        body.extend(chunk)
-    if not body:
-        raise HTTPException(status_code=422, detail="El archivo está vacío.")
-    return bytes(body)
 
 
 @router.get("")
@@ -96,7 +71,7 @@ async def upload_file(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(error)
         ) from error
-    except attachments.InvalidAttachment as error:
+    except InvalidAttachment as error:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=str(error)
         ) from error
@@ -133,8 +108,4 @@ def download_file(
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(error)
         ) from error
-    return RedirectResponse(
-        url,
-        status_code=status.HTTP_303_SEE_OTHER,
-        headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"},
-    )
+    return private_download(url)

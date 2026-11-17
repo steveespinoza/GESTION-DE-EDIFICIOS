@@ -5,12 +5,11 @@ import { PropertyRequestError } from '../properties/api'
 import { usePropertyQuery } from '../properties/usePropertyQuery'
 import { readStatement, type Payment, type Period, type Statement } from './api'
 import { PaymentForm } from './PaymentForm'
+import { OwnerReports } from './OwnerReports'
+import { money, periodLabel } from './format'
 import './collections.css'
 
-const monthFormatter = new Intl.DateTimeFormat('es-PE', { month: 'long', year: 'numeric', timeZone: 'UTC' })
-const periodLabel = (period: Period) => monthFormatter.format(new Date(Date.UTC(period.billing_year, period.billing_month - 1, 1)))
 const periodKey = (period: Period) => `${period.billing_year}-${String(period.billing_month).padStart(2, '0')}`
-const money = (value: string) => `S/ ${value.replace('.', ',')}`
 
 function StatementContent({ statement }: { statement: Statement }) {
   const [selected, setSelected] = useState('')
@@ -107,6 +106,7 @@ function UnitStatement({ unitId, buildingId }: { unitId: string; buildingId?: st
         <>
           <StatementContent statement={query.data} />
           {buildingId && <PaymentForm buildingId={buildingId} unitId={unitId} period={query.data.charges.at(-1)} onSaved={onSaved} />}
+          {!buildingId && <OwnerReports unitId={unitId} period={query.data.charges.at(-1)} />}
         </>
       )}
     </section>

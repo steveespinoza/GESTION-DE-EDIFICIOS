@@ -17,8 +17,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
-
-MAX_FILE_BYTES = 10 * 1024 * 1024
+from app.storage.files import MAX_FILE_BYTES
 
 
 class FileKind(StrEnum):

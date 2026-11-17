@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.billing.attachment_models import FileKind, InvoiceAttachment
 from app.billing.errors import InvoiceConflict, InvoiceNotFound
 from app.billing.models import ServiceCategory, ServiceInvoice
-from app.storage.files import FileStorage
+from app.storage.files import FileStorage, validate_attachment
 
 
 class AttachmentDetail(BaseModel):
@@ -22,26 +22,6 @@ class AttachmentDetail(BaseModel):
     content_type: str
     size_bytes: int
     uploaded_at: datetime
-
-
-class InvalidAttachment(Exception):
-    pass
-
-
-def validate_attachment(filename: str, body: bytes) -> str:
-    if not filename or any(
-        character in "/\\" or ord(character) < 32 or ord(character) == 127
-        for character in filename
-    ):
-        raise InvalidAttachment("El nombre del archivo no es válido.")
-    extension = filename.rpartition(".")[2].lower()
-    if extension == "pdf" and body.startswith(b"%PDF-"):
-        return "application/pdf"
-    if extension == "png" and body.startswith(b"\x89PNG\r\n\x1a\n"):
-        return "image/png"
-    if extension in {"jpg", "jpeg"} and body.startswith(b"\xff\xd8\xff"):
-        return "image/jpeg"
-    raise InvalidAttachment("Selecciona un archivo PDF, PNG o JPEG válido.")
 
 
 def require_invoice(

@@ -33,7 +33,11 @@ export interface Statement {
   payments: Payment[]
 }
 
-export type PaymentInput = Pick<Payment, 'billing_year' | 'billing_month' | 'received_on' | 'amount' | 'reference'> & { request_id: string }
+export type PaymentValues = Pick<Payment, 'received_on' | 'amount' | 'reference'>
+
+export interface PaymentInput extends Period, PaymentValues {
+  request_id: string
+}
 
 const adminUnit = (buildingId: string, unitId: string) => `/api/admin/buildings/${encodeURIComponent(buildingId)}/units/${encodeURIComponent(unitId)}`
 

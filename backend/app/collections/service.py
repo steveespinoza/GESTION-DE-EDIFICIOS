@@ -180,6 +180,15 @@ def record_payment(
     if lock_building(db, building_id) is None:
         raise UnitNotFound
     unit_in_building(db, building_id, unit_id)
+    result = stage_payment(db, unit_id, user_id, data)
+    db.commit()
+    return result
+
+
+def stage_payment(
+    db: Session, unit_id: UUID, user_id: UUID, data: PaymentInput
+) -> tuple[PaymentDetail, bool]:
+    """Apply a payment in the caller's transaction while it holds the building lock."""
     total = int(data.amount.scaleb(2))
     attributes = {
         "unit_id": unit_id,
@@ -223,5 +232,4 @@ def record_payment(
         if invoice.accounting_locked_at is None:
             invoice.accounting_locked_at = recorded_at
     result = payment_details(db, unit_id, payment.id)[0]
-    db.commit()
     return result, True
