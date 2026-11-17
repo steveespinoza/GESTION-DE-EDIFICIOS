@@ -1,0 +1,15 @@
+.unit-statement {
+  display: grid;
+  gap: 1rem;
+}
+
+.statement-period label {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.unit-statement summary {
+  cursor: pointer;
+}

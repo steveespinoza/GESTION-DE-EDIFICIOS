@@ -50,4 +50,4 @@ Los identificadores se comparten con la [matriz de paridad](paridad.md). Los [ca
 
 Los pagos se realizan fuera de la aplicación. La versión de portafolio usa datos ficticios y un entorno propio. La migración de registros empresariales queda fuera de esta entrega.
 
-Queda por confirmar si existe un flujo que requiera un administrador restringido a un edificio o una cuenta de inquilino. También quedan por definir la prioridad entre cargos en un pago parcial, el tratamiento de periodos omitidos, la corrección de periodos liquidados y las columnas del Excel de transparencia.
+Queda por confirmar si existe un flujo que requiera un administrador restringido a un edificio o una cuenta de inquilino. También quedan por definir el tratamiento de periodos omitidos, los ajustes de periodos liquidados y las columnas del Excel de transparencia.

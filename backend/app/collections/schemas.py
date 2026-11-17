@@ -1,0 +1,56 @@
+from datetime import date
+from decimal import Decimal
+from typing import Annotated
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
+
+from app.billing.invoice_schemas import AccountingPeriod
+
+
+class PaymentInput(AccountingPeriod):
+    model_config = ConfigDict(extra="forbid")
+
+    request_id: UUID
+    received_on: date
+    amount: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
+    reference: Annotated[str, StringConstraints(max_length=120)] | None = None
+
+    @field_validator("reference", mode="before")
+    @classmethod
+    def normalize_reference(cls, value: object) -> object:
+        return (value.strip() or None) if isinstance(value, str) else value
+
+
+class StatementCharge(AccountingPeriod):
+    id: UUID
+    service: str
+    coverage_end: date
+    amount: Decimal
+    applied: Decimal
+    balance: Decimal
+    consumption: Decimal | None
+
+
+class AppliedCharge(AccountingPeriod):
+    charge_id: UUID
+    service: str
+    amount: Decimal
+
+
+class PaymentDetail(AccountingPeriod):
+    id: UUID
+    received_on: date
+    amount: Decimal
+    credit: Decimal
+    reference: str | None
+    applications: list[AppliedCharge] = Field(default_factory=list)
+
+
+class Statement(BaseModel):
+    unit_number: str
+    building_name: str
+    balance: Decimal
+    credit: Decimal
+    charges: list[StatementCharge]
+    payments: list[PaymentDetail]

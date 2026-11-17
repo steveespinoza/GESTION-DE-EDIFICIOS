@@ -85,3 +85,10 @@ Completar el arranque descrito en el [README](../README.md#desarrollo-local) y u
 2. Abrir la misma factura en dos pestañas. Guardar un cambio en una y luego intentar guardar en la otra. La API devuelve `409` a la segunda. Recargar la ficha y comprobar que muestra la corrección que se guardó.
 3. En una factura medida con un periodo posterior registrado, intentar cambiar una lectura final que se usa en la siguiente factura. La API rechaza el cambio. Corregir el monto o un volumen que cubra el consumo y comprobar que se actualiza el reparto.
 4. La [suite con PostgreSQL](../backend/tests/test_invoice_corrections.py) comprueba que una factura marcada con movimientos conserva sus cargos y su historial ante un intento de edición directa.
+
+## Recorrido de registro de pagos
+
+1. Registrar dos facturas de S/ 50,00 para una misma unidad en diciembre y enero. Como SuperAdmin, abrir la unidad y elegir «Estado de cuenta». Debe mostrar S/ 100,00 pendientes.
+2. Registrar S/ 10,00 con fecha de recepción y enero como mes de aplicación. Deben quedar S/ 90,00 pendientes. Al abrir el detalle del pago se ve una aplicación de S/ 10,00 al cargo de diciembre.
+3. Registrar S/ 95,00 con el mismo mes de aplicación. El detalle muestra S/ 40,00 aplicados a diciembre y S/ 50,00 a enero, con S/ 5,00 de crédito. Repetir con la misma clave de solicitud debe conservar un solo pago de S/ 95,00.
+4. Iniciar sesión como Propietario y entrar al estado de cuenta de la unidad. Comprobar el filtro de periodo, el crédito y el detalle de las aplicaciones. Una unidad ajena devuelve `404`. El [contrato y los efectos persistidos](../backend/tests/test_collections.py) se comprueban con PostgreSQL.

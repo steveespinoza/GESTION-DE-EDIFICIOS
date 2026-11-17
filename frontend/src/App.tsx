@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 
 import { ServiceCatalogPage } from './features/billing/ServiceCatalogPage'
 import { InvoicePage } from './features/billing/InvoicePage'
+import { StatementPage } from './features/collections/StatementPage'
 import { LoginForm } from './features/identity/LoginForm'
 import { getCurrentSession, type SessionUser } from './features/identity/api'
 import { PropertyWorkspace } from './features/properties/PropertyWorkspace'
@@ -88,6 +89,7 @@ export function App() {
               <Route path="edificios/:buildingId/unidades" element={<UnitsList />} />
               <Route path="edificios/:buildingId/unidades/nueva" element={<NewUnitPage />} />
               <Route path="edificios/:buildingId/unidades/:unitId" element={<UnitPage key="unit" />} />
+              <Route path="edificios/:buildingId/unidades/:unitId/estado-de-cuenta" element={<StatementPage />} />
               <Route path="edificios/:buildingId/unidades/:unitId/editar" element={<UnitPage key="edit-unit" mode="unit" />} />
               <Route path="edificios/:buildingId/unidades/:unitId/propietario" element={<UnitPage key="edit-owner" mode="owner" />} />
             </Route>
@@ -99,6 +101,7 @@ export function App() {
             >
               <Route index element={<MyProperties />} />
               <Route path="unidades/:unitId" element={<MyUnitPage />} />
+              <Route path="unidades/:unitId/estado-de-cuenta" element={<StatementPage />} />
             </Route>
             <Route path="*" element={redirect} />
           </Routes>
