@@ -29,6 +29,10 @@
   gap: 0.4rem;
 }
 
+.proof-history h4 {
+  margin: 0 0 0.75rem;
+}
+
 .unit-statement input[type="file"] {
   width: 100%;
 }

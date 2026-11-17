@@ -2,16 +2,22 @@ from typing import Annotated
 from urllib.parse import unquote
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import RedirectResponse
 from pydantic import ValidationError
 
-from app.collections import reports
-from app.collections.report_models import PaymentReport
-from app.collections.report_schemas import RejectionInput, ReportDetail, ReportUpload
+from app.collections import proofs, reports
+from app.collections.report_models import PaymentReport, PaymentReportProof
+from app.collections.report_schemas import (
+    ApprovalInput,
+    ProofDetail,
+    ProofUpload,
+    RejectionInput,
+    ReportDetail,
+    ReportUpload,
+)
 from app.collections.router import Admin, Owner
-from app.collections.schemas import PaymentValues
 from app.collections.service import PaymentConflict, UnitNotFound
 from app.dependencies import RequestSession
 from app.identity.router import require_session_header
@@ -81,7 +87,9 @@ def building_list(
         raise HTTPException(404, str(error)) from error
 
 
-def download(report: PaymentReport, storage: StorageFactory) -> RedirectResponse:
+def download(
+    report: PaymentReport | PaymentReportProof, storage: StorageFactory
+) -> RedirectResponse:
     try:
         return private_download(
             storage().download_url(report.storage_key, report.filename)
@@ -101,9 +109,11 @@ def owner_download(
     db: RequestSession,
     user: Owner,
     storage: StorageFactory,
+    revision: Annotated[int, Query(ge=0)] = 0,
 ) -> RedirectResponse:
     try:
-        return download(reports.owner_proof(db, unit_id, report_id, user.id), storage)
+        report = reports.owner_proof(db, unit_id, report_id, user.id)
+        return download(proofs.proof_version(db, report, revision), storage)
     except reports.ReportNotFound as error:
         raise HTTPException(
             404, str(error), headers={"Cache-Control": "no-store"}
@@ -121,10 +131,11 @@ def admin_download(
     db: RequestSession,
     _user: Admin,
     storage: StorageFactory,
+    revision: Annotated[int, Query(ge=0)] = 0,
 ) -> RedirectResponse:
     try:
         report, _ = reports.building_report(db, building_id, report_id)
-        return download(report, storage)
+        return download(proofs.proof_version(db, report, revision), storage)
     except reports.ReportNotFound as error:
         raise HTTPException(
             404, str(error), headers={"Cache-Control": "no-store"}
@@ -138,7 +149,7 @@ def admin_download(
 def approve(
     building_id: UUID,
     report_id: UUID,
-    data: PaymentValues,
+    data: ApprovalInput,
     db: RequestSession,
     user: Admin,
 ) -> ReportDetail:
@@ -162,8 +173,78 @@ def reject(
     user: Admin,
 ) -> ReportDetail:
     try:
-        return reports.reject_report(db, building_id, report_id, user.id, data.reason)
+        return reports.reject_report(
+            db, building_id, report_id, user.id, data.reason, data.proof_revision
+        )
     except reports.ReportNotFound as error:
         raise HTTPException(404, str(error)) from error
     except PaymentConflict as error:
         raise HTTPException(409, str(error)) from error
+
+
+@router.get(f"{OWNER_REPORTS}/{{report_id}}/proofs")
+def owner_history(
+    unit_id: UUID, report_id: UUID, db: RequestSession, user: Owner
+) -> list[ProofDetail]:
+    try:
+        report = reports.owner_proof(db, unit_id, report_id, user.id)
+        return proofs.proof_history(db, report)
+    except reports.ReportNotFound as error:
+        raise HTTPException(404, str(error)) from error
+
+
+@router.get(f"{BUILDING_REPORTS}/{{report_id}}/proofs")
+def admin_history(
+    building_id: UUID, report_id: UUID, db: RequestSession, _user: Admin
+) -> list[ProofDetail]:
+    try:
+        report, _ = reports.building_report(db, building_id, report_id)
+        return proofs.proof_history(db, report)
+    except reports.ReportNotFound as error:
+        raise HTTPException(404, str(error)) from error
+
+
+@router.post(
+    f"{BUILDING_REPORTS}/{{report_id}}/proofs",
+    status_code=201,
+    dependencies=[Depends(require_session_header)],
+)
+async def replace(
+    building_id: UUID,
+    report_id: UUID,
+    metadata: Annotated[str, Header(alias="X-Edificios-Report", max_length=8192)],
+    request: Request,
+    response: Response,
+    db: RequestSession,
+    user: Admin,
+    storage: StorageFactory,
+) -> ReportDetail:
+    try:
+        await run_in_threadpool(reports.building_report, db, building_id, report_id)
+        data = ProofUpload.model_validate_json(unquote(metadata, errors="strict"))
+        body = await read_body(request)
+        result, created = await run_in_threadpool(
+            proofs.replace_proof,
+            db,
+            building_id,
+            report_id,
+            user.id,
+            data,
+            body,
+            storage,
+        )
+    except reports.ReportNotFound as error:
+        raise HTTPException(404, str(error)) from error
+    except (ValidationError, UnicodeDecodeError) as error:
+        raise HTTPException(
+            422, "Revisa el archivo y el motivo del reemplazo."
+        ) from error
+    except InvalidAttachment as error:
+        raise HTTPException(415, str(error)) from error
+    except PaymentConflict as error:
+        raise HTTPException(409, str(error)) from error
+    except StorageUnavailable as error:
+        raise HTTPException(503, str(error)) from error
+    if not created:
+        response.status_code = 200
+    return result

@@ -64,10 +64,12 @@ Si la unidad no está asociada a su cuenta, el sistema deniega también el acces
 **Actor** — SuperAdmin. **Requisitos** — `COB-01`, `COB-02`, `ARC-01`.
 
 1. En la bandeja de cobranzas, selecciona la unidad y el periodo. Revisa el saldo, el vencimiento y el comprobante recibido, si existe.
-2. Registra la fecha y el monto efectivamente recibidos. Puede conservar el comprobante o adjuntar otro.
+2. Revisa la versión vigente del comprobante y registra la fecha y el monto efectivamente recibidos. Puede cargar una copia legible indicando el motivo. El original y las versiones anteriores quedan disponibles en el historial.
 3. El sistema registra la confirmación, aplica el monto y actualiza el detalle del pago. Si hay una diferencia, queda identificado el saldo pendiente o el crédito.
 
 Reintentar la misma aprobación tiene un solo efecto contable. El arrastre al periodo siguiente conserva una referencia a su origen.
+
+Si otra sesión reemplaza el comprobante durante la revisión, el sistema pide actualizar el reporte antes de tomar la decisión. El reemplazo está disponible mientras el reporte esté pendiente.
 
 ## CU-08 · Emitir recibos y exportar reportes
 
