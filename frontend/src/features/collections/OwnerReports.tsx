@@ -6,7 +6,8 @@ import { usePropertyQuery } from '../properties/usePropertyQuery'
 import type { Period } from './api'
 import { money, periodLabel } from './format'
 import { PaymentFields, PaymentPeriodFields, readPaymentPeriod, readPaymentValues } from './PaymentFields'
-import { ownerReports, proofDownload, reportStatus, submitReport } from './reportApi'
+import { ownerReports, reportStatus, submitReport } from './reportApi'
+import { ProofHistory } from './ProofHistory'
 
 export function OwnerReports({ unitId, period }: { unitId: string; period?: Period }) {
   const onSessionEnded = useOutletContext<() => void>()
@@ -86,7 +87,7 @@ export function OwnerReports({ unitId, period }: { unitId: string; period?: Peri
                 <dt>{periodLabel(report)} · {money(report.amount)}</dt>
                 <dd>{reportStatus[report.status]}</dd>
                 {report.rejection_reason && <dd>Motivo del rechazo · {report.rejection_reason}</dd>}
-                <dd><a href={proofDownload(report)}>{report.filename}</a></dd>
+                <dd><ProofHistory report={report} /></dd>
               </div>
             ))}
           </dl>

@@ -45,6 +45,10 @@ El propietario puede enviar un reporte desde el estado de cuenta. Indica el peri
 
 La aprobación aplica el pago y registra la decisión dentro de la misma transacción. Dos aprobaciones iguales producen un solo pago. Un reporte pendiente o rechazado deja el saldo tal como estaba.
 
+Mientras el reporte esté pendiente, el SuperAdmin puede reemplazar el comprobante con una copia recibida por otro canal. Debe indicar el motivo del reemplazo. Cada versión conserva el archivo, la cuenta que lo subió, la fecha y el motivo. El propietario puede consultar ese historial desde su reporte y descargar el original o cualquiera de las copias.
+
+La versión más reciente queda vigente para la revisión. Si otra sesión reemplaza el archivo, la API pide actualizar el reporte antes de aprobarlo o rechazarlo. Al terminar la revisión, el historial conserva la versión sobre la que se tomó la decisión.
+
 PostgreSQL guarda el pago, sus aplicaciones y el bloqueo de las facturas afectadas en la misma transacción. Repetir la misma solicitud devuelve el pago registrado. Si la misma solicitud llega con otros datos, la API pide revisar el historial.
 
 | Situación | Resultado esperado |

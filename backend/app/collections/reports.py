@@ -7,8 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.collections.report_models import PaymentReport, ReportStatus
-from app.collections.report_schemas import ReportDetail, ReportUpload
-from app.collections.schemas import PaymentInput, PaymentValues
+from app.collections.report_schemas import ApprovalInput, ReportDetail, ReportUpload
+from app.collections.schemas import PaymentInput
 from app.collections.service import (
     PaymentConflict,
     UnitNotFound,
@@ -41,6 +41,7 @@ def report_detail(report: PaymentReport, unit: Unit) -> ReportDetail:
         reviewed_at=report.reviewed_at.astimezone(UTC) if report.reviewed_at else None,
         payment_id=report.payment_id,
         rejection_reason=report.rejection_reason,
+        proof_revision=report.proof_revision,
     )
 
 
@@ -149,7 +150,9 @@ def building_report(
         raise ReportNotFound("Reporte no encontrado.")
     query = building_report_rows(building_id).where(PaymentReport.id == report_id)
     if review:
-        query = query.with_for_update(of=PaymentReport)
+        query = query.with_for_update(of=PaymentReport).execution_options(
+            populate_existing=True
+        )
     row = db.execute(query).one_or_none()
     if row is None:
         raise ReportNotFound("Reporte no encontrado.")
@@ -161,9 +164,10 @@ def approve_report(
     building_id: UUID,
     report_id: UUID,
     reviewer_id: UUID,
-    data: PaymentValues,
+    data: ApprovalInput,
 ) -> ReportDetail:
     report, unit = building_report(db, building_id, report_id, review=True)
+    require_proof_revision(report, data.proof_revision)
     if report.payment_id is not None:
         payment = payment_details(db, unit.id, report.payment_id)[0]
         if (payment.amount, payment.received_on, payment.reference) != (
@@ -183,7 +187,7 @@ def approve_report(
         report.unit_id,
         reviewer_id,
         PaymentInput(
-            **data.model_dump(),
+            **data.model_dump(exclude={"proof_revision"}),
             request_id=uuid4(),
             billing_year=report.billing_year,
             billing_month=report.billing_month,
@@ -203,8 +207,10 @@ def reject_report(
     report_id: UUID,
     reviewer_id: UUID,
     reason: str,
+    proof_revision: int = 0,
 ) -> ReportDetail:
     report, unit = building_report(db, building_id, report_id, review=True)
+    require_proof_revision(report, proof_revision)
     if report.status == ReportStatus.REJECTED and report.rejection_reason == reason:
         return report_detail(report, unit)
     if report.status != ReportStatus.PENDING:
@@ -215,3 +221,10 @@ def reject_report(
     result = report_detail(report, unit)
     db.commit()
     return result
+
+
+def require_proof_revision(report: PaymentReport, revision: int) -> None:
+    if report.proof_revision != revision:
+        raise PaymentConflict(
+            "El comprobante cambió. Actualiza el reporte y revisa la versión vigente."
+        )

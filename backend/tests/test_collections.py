@@ -217,6 +217,7 @@ def payment_storage():
 
         def __init__(self):
             self.writes = []
+            self.downloads = []
 
         def put(self, key, body, content_type):
             self.writes.append((key, body, content_type))
@@ -225,6 +226,7 @@ def payment_storage():
 
         def download_url(self, key, filename):
             assert key in {write[0] for write in self.writes}
+            self.downloads.append((key, filename))
             return "https://proof.example.test/private"
 
     storage = MemoryProofs()
@@ -399,3 +401,170 @@ def test_rejected_report_never_posts_and_failed_upload_can_retry(
         assert db.scalar(select(func.count()).select_from(Payment)) == 0
     assert sign_in("test-owner").status_code == 200
     assert admin.get(path).json()[0]["rejection_reason"] == reason["reason"]
+
+
+def test_replacing_proof_keeps_original_history_and_guards_stale_review(
+    admin, ledger, session_header, sign_in, sessions, payment_storage
+):
+    (building, other), (unit_id, _), _ = ledger
+    owner_path = f"/api/owner/properties/{unit_id}/payment-reports"
+    assert sign_in("test-owner").status_code == 200
+    original = send_report(
+        admin, owner_path, session_header, payment_data(filename="original.pdf")
+    ).json()
+    report_path = f"{building}/payment-reports/{original['id']}"
+    replacement = {
+        "request_id": str(uuid4()),
+        "filename": "legible.pdf",
+        "reason": "Copia legible recibida por correo",
+        "proof_revision": 0,
+    }
+    assert (
+        send_report(
+            admin, f"{report_path}/proofs", session_header, replacement
+        ).status_code
+        == 403
+    )
+    assert sign_in("test-admin").status_code == 200
+    assert (
+        send_report(
+            admin,
+            f"{report_path.replace(building, other)}/proofs",
+            session_header,
+            replacement,
+        ).status_code
+        == 404
+    )
+    response = send_report(
+        admin,
+        f"{report_path}/proofs",
+        session_header,
+        replacement,
+        b"%PDF-1.7\nLegible",
+    )
+    assert response.status_code == 201, response.text
+    current = response.json()
+    assert current["proof_revision"] == 1 and current["status"] == "PENDING"
+    assert current["filename"] == "original.pdf"
+    assert (
+        send_report(
+            admin,
+            f"{report_path}/proofs",
+            session_header,
+            replacement,
+            b"%PDF-1.7\nLegible",
+        ).status_code
+        == 200
+    )
+    assert len(payment_storage.writes) == 2
+    history = admin.get(f"{report_path}/proofs").json()
+    assert [
+        (item["revision"], item["filename"], item["uploaded_by"]) for item in history
+    ] == [
+        (0, "original.pdf", "test-owner"),
+        (1, "legible.pdf", "test-admin"),
+    ]
+    assert history[0]["reason"] is None
+    assert history[1]["reason"] == replacement["reason"]
+    for revision, filename in ((0, "original.pdf"), (1, "legible.pdf")):
+        assert (
+            admin.get(
+                f"{report_path}/proof",
+                params={"revision": revision},
+                follow_redirects=False,
+            ).status_code
+            == 303
+        )
+        assert payment_storage.downloads[-1][1] == filename
+    assert payment_storage.downloads[-2][0] != payment_storage.downloads[-1][0]
+    assert (
+        admin.get(f"{report_path}/proof?revision=2", follow_redirects=False).status_code
+        == 404
+    )
+    assert (
+        admin.get(f"{report_path.replace(building, other)}/proofs").status_code == 404
+    )
+    approval = {"received_on": "2027-01-07", "amount": "10.00"}
+    assert (
+        admin.put(
+            f"{report_path}/approval", headers=session_header, json=approval
+        ).status_code
+        == 409
+    )
+    assert (
+        admin.put(
+            f"{report_path}/rejection",
+            headers=session_header,
+            json={"reason": "Revisar"},
+        ).status_code
+        == 409
+    )
+    with sessions() as db:
+        assert db.scalar(select(func.count()).select_from(Payment)) == 0
+    approved = admin.put(
+        f"{report_path}/approval",
+        headers=session_header,
+        json={**approval, "proof_revision": 1},
+    )
+    assert approved.status_code == 200
+    assert approved.json()["proof_revision"] == 1
+    assert (
+        send_report(
+            admin,
+            f"{report_path}/proofs",
+            session_header,
+            {**replacement, "request_id": str(uuid4()), "proof_revision": 1},
+        ).status_code
+        == 409
+    )
+    assert sign_in("test-owner").status_code == 200
+    own = f"{owner_path}/{original['id']}"
+    assert admin.get(f"{own}/proofs").json() == history
+    assert (
+        admin.get(f"{own}/proof?revision=1", follow_redirects=False).status_code == 303
+    )
+    assert sign_in("second-owner").status_code == 200
+    assert admin.get(f"{own}/proofs").status_code == 404
+    assert (
+        admin.get(f"{own}/proof?revision=1", follow_redirects=False).status_code == 404
+    )
+
+
+def test_replacement_rolls_back_after_storage_failure_and_reuses_object_key(
+    admin, ledger, session_header, sign_in, payment_storage
+):
+    (building, _), (unit_id, _), _ = ledger
+    owner = f"/api/owner/properties/{unit_id}/payment-reports"
+    assert sign_in("test-owner").status_code == 200
+    original = send_report(
+        admin, owner, session_header, payment_data(filename="original.pdf")
+    ).json()
+    path = f"{building}/payment-reports/{original['id']}/proofs"
+    assert sign_in("test-admin").status_code == 200
+    data = {
+        "request_id": str(uuid4()),
+        "filename": "nuevo.pdf",
+        "reason": "Copia legible",
+        "proof_revision": 0,
+    }
+    assert (
+        send_report(admin, path, session_header, {**data, "reason": " "}).status_code
+        == 422
+    )
+    assert send_report(admin, path, session_header, data, b"<html>").status_code == 415
+    payment_storage.fail = True
+    assert send_report(admin, path, session_header, data).status_code == 503
+    assert len(admin.get(path).json()) == 1
+    payment_storage.fail = False
+    response = send_report(admin, path, session_header, data)
+    assert response.status_code == 201 and response.json()["proof_revision"] == 1
+    assert payment_storage.writes[-2] == payment_storage.writes[-1]
+    changed = send_report(
+        admin, path, session_header, {**data, "reason": "Otro motivo"}
+    )
+    assert changed.status_code == 409
+    stale = send_report(
+        admin, path, session_header, {**data, "request_id": str(uuid4())}
+    )
+    assert stale.status_code == 409
+    assert len(admin.get(path).json()) == 2

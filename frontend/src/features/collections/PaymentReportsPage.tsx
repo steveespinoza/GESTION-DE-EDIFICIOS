@@ -1,21 +1,48 @@
-import { useCallback, useState, type FormEvent } from 'react'
+import { useCallback, useRef, useState, type FormEvent } from 'react'
 import { Link, useOutletContext, useParams } from 'react-router-dom'
 
 import { PropertyRequestError, readBuilding } from '../properties/api'
 import { usePropertyQuery } from '../properties/usePropertyQuery'
 import { money, periodLabel } from './format'
 import { PaymentFields, readPaymentValues } from './PaymentFields'
-import { approveReport, buildingReports, proofDownload, rejectReport, reportStatus, type PaymentReport } from './reportApi'
+import { approveReport, buildingReports, replaceProof, rejectReport, reportStatus, type PaymentReport } from './reportApi'
+import { ProofHistory } from './ProofHistory'
 import './collections.css'
 
-function ReviewForms({ buildingId, report, onReviewed }: {
+function ReviewForms({ buildingId, report, onReviewed, onReplaced }: {
   buildingId: string
   report: PaymentReport
   onReviewed: (report: PaymentReport) => void
+  onReplaced: () => void
 }) {
   const onSessionEnded = useOutletContext<() => void>()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const requestId = useRef<string | null>(null)
+
+  async function replace(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (saving) return
+    const fields = new FormData(event.currentTarget)
+    const file = fields.get('proof')
+    const reason = String(fields.get('replacement_reason') ?? '').trim()
+    if (!(file instanceof File) || !file.size || file.size > 10 * 1024 * 1024 || !reason) {
+      setError('Selecciona un comprobante de hasta 10 MiB e indica el motivo del reemplazo.')
+      return
+    }
+    requestId.current ??= crypto.randomUUID()
+    setSaving(true)
+    setError('')
+    try {
+      await replaceProof(buildingId, report, requestId.current, reason, file)
+      onReplaced()
+    } catch (issue) {
+      if (issue instanceof PropertyRequestError && issue.status === 401) onSessionEnded()
+      else setError(issue instanceof PropertyRequestError && issue.detail ? issue.detail : 'No se pudo confirmar el reemplazo. Actualiza el reporte para comprobar el historial.')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   async function review(event: FormEvent<HTMLFormElement>, approval: boolean) {
     event.preventDefault()
@@ -25,8 +52,8 @@ function ReviewForms({ buildingId, report, onReviewed }: {
     setError('')
     try {
       const result = approval
-        ? await approveReport(buildingId, report.id, readPaymentValues(fields))
-        : await rejectReport(buildingId, report.id, String(fields.get('reason')))
+        ? await approveReport(buildingId, report.id, { ...readPaymentValues(fields), proof_revision: report.proof_revision })
+        : await rejectReport(buildingId, report.id, String(fields.get('reason')), report.proof_revision)
       onReviewed(result)
     } catch (issue) {
       if (issue instanceof PropertyRequestError && issue.status === 401) onSessionEnded()
@@ -38,6 +65,14 @@ function ReviewForms({ buildingId, report, onReviewed }: {
 
   return (
     <div className="payment-review-forms">
+      <form className="building-form" onSubmit={(event) => void replace(event)} aria-busy={saving}>
+        <fieldset className="building-form-grid" disabled={saving}>
+          <legend>Reemplazar comprobante</legend>
+          <label className="building-form-wide">Nuevo comprobante (PDF, PNG o JPEG, hasta 10 MiB)<input type="file" name="proof" accept=".pdf,.png,.jpg,.jpeg" required /></label>
+          <label className="building-form-wide">Motivo del reemplazo<textarea name="replacement_reason" rows={2} maxLength={500} required /></label>
+        </fieldset>
+        <button type="submit" disabled={saving}>Guardar nuevo comprobante</button>
+      </form>
       <form className="building-form" onSubmit={(event) => void review(event, true)} aria-busy={saving}>
         <fieldset className="building-form-grid" disabled={saving}>
           <legend>Confirmar datos del pago</legend>
@@ -67,6 +102,11 @@ function BuildingReports({ buildingId }: { buildingId: string }) {
 
   function onReviewed(report: PaymentReport) {
     setNotice(report.status === 'APPROVED' ? 'Reporte aprobado. El pago quedó aplicado.' : 'Reporte rechazado.')
+    retry()
+  }
+
+  function onReplaced() {
+    setNotice('Comprobante reemplazado. La versión anterior está disponible en el historial.')
     retry()
   }
 
@@ -103,9 +143,9 @@ function BuildingReports({ buildingId }: { buildingId: string }) {
                 <p>{reportStatus[report.status]} · Fecha declarada {report.received_on}</p>
                 {report.reference && <p>Referencia declarada {report.reference}</p>}
                 {report.rejection_reason && <p>Motivo del rechazo · {report.rejection_reason}</p>}
-                <a href={proofDownload(report, buildingId)}>Descargar {report.filename}</a>
+                <ProofHistory report={report} buildingId={buildingId} />
                 <Link to={`${buildingPath}/unidades/${report.unit_id}/estado-de-cuenta`}>Ver estado de cuenta</Link>
-                {report.status === 'PENDING' && <ReviewForms buildingId={buildingId} report={report} onReviewed={onReviewed} />}
+                {report.status === 'PENDING' && <ReviewForms buildingId={buildingId} report={report} onReviewed={onReviewed} onReplaced={onReplaced} />}
               </div>
             </details>
           ))}

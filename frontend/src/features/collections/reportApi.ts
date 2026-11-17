@@ -12,6 +12,16 @@ export interface PaymentReport extends Period, PaymentValues {
   reviewed_at: string | null
   payment_id: string | null
   rejection_reason: string | null
+  proof_revision: number
+}
+
+export interface ProofVersion {
+  revision: number
+  filename: string
+  size_bytes: number
+  uploaded_by: string
+  uploaded_at: string
+  reason: string | null
 }
 
 export const reportStatus: Record<ReportStatus, string> = {
@@ -43,15 +53,39 @@ export function buildingReports(buildingId: string, signal: AbortSignal) {
   return propertyRequest<PaymentReport[]>(buildingPath(buildingId), { signal })
 }
 
-export function proofDownload(report: PaymentReport, buildingId?: string) {
+export function proofDownload(report: PaymentReport, buildingId?: string, revision = 0) {
   const path = buildingId ? buildingPath(buildingId) : ownerPath(report.unit_id)
-  return `${path}/${encodeURIComponent(report.id)}/proof`
+  return `${path}/${encodeURIComponent(report.id)}/proof?revision=${revision}`
 }
 
-export function approveReport(buildingId: string, reportId: string, values: PaymentValues) {
+export function approveReport(buildingId: string, reportId: string, values: PaymentValues & { proof_revision: number }) {
   return writeProperty<PaymentReport>(`${buildingPath(buildingId)}/${encodeURIComponent(reportId)}/approval`, 'PUT', values)
 }
 
-export function rejectReport(buildingId: string, reportId: string, reason: string) {
-  return writeProperty<PaymentReport>(`${buildingPath(buildingId)}/${encodeURIComponent(reportId)}/rejection`, 'PUT', { reason })
+export function rejectReport(buildingId: string, reportId: string, reason: string, proofRevision: number) {
+  return writeProperty<PaymentReport>(`${buildingPath(buildingId)}/${encodeURIComponent(reportId)}/rejection`, 'PUT', { reason, proof_revision: proofRevision })
+}
+
+export function proofHistory(report: PaymentReport, signal: AbortSignal, buildingId?: string) {
+  const path = buildingId ? buildingPath(buildingId) : ownerPath(report.unit_id)
+  return propertyRequest<ProofVersion[]>(`${path}/${encodeURIComponent(report.id)}/proofs`, { signal })
+}
+
+export function replaceProof(
+  buildingId: string,
+  report: PaymentReport,
+  requestId: string,
+  reason: string,
+  file: File,
+) {
+  const data = { request_id: requestId, proof_revision: report.proof_revision, reason, filename: file.name }
+  return propertyRequest<PaymentReport>(`${buildingPath(buildingId)}/${encodeURIComponent(report.id)}/proofs`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/octet-stream',
+      'X-Edificios-Request': '1',
+      'X-Edificios-Report': encodeURIComponent(JSON.stringify(data)),
+    },
+    body: file,
+  }, 90_000)
 }

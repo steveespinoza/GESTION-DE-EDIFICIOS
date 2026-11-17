@@ -99,3 +99,10 @@ Completar el arranque descrito en el [README](../README.md#desarrollo-local) y u
 2. Como SuperAdmin, abrir «Reportes de pago» desde el edificio y descargar el comprobante. Aprobar indicando el importe efectivamente recibido. Al repetir la misma aprobación, el estado de cuenta debe mostrar un solo pago.
 3. Enviar otro reporte y rechazarlo con un motivo. El propietario debe ver el motivo en su historial y la deuda debe reflejar solo el pago aprobado.
 4. Las [pruebas de API](../backend/tests/test_collections.py) verifican acceso por titular y edificio, formatos, tamaño, reintento tras error de almacenamiento y enlace temporal. El recorrido local usa un adaptador de prueba. La validación con el bucket está en la [guía de S3](archivos-s3.md).
+
+## Recorrido de reemplazo de comprobantes
+
+1. En un reporte pendiente, descargar el original y guardar una copia nueva con un motivo. Abrir de nuevo el reporte. El historial debe mostrar el original, la copia vigente, la cuenta y la fecha de cada carga, junto con el motivo del reemplazo.
+2. Descargar ambas versiones y comprobar que cada una corresponde a su archivo. Iniciar sesión como el propietario que envió el reporte y comprobar el mismo historial.
+3. Abrir el reporte en dos sesiones. Reemplazar el archivo desde una e intentar aprobar desde la otra. La API debe devolver `409` y pedir actualizar el reporte.
+4. Actualizar la bandeja, revisar la versión vigente y aprobar. El pago se aplica una sola vez y el historial del comprobante sigue disponible. Las [pruebas de integración](../backend/tests/test_collections.py) también verifican permisos, reintentos y recuperación tras un error de almacenamiento.

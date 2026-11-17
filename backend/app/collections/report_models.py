@@ -54,6 +54,9 @@ class PaymentReport(Base):
             name="ck_payment_reports_proof_size",
         ),
         CheckConstraint(REVIEW_STATE_CHECK, name="ck_payment_reports_state"),
+        CheckConstraint(
+            "proof_revision >= 0", name="ck_payment_reports_proof_revision"
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
@@ -76,6 +79,7 @@ class PaymentReport(Base):
     reviewed_by_id: Mapped[UUID | None] = mapped_column(ForeignKey("accounts.id"))
     payment_id: Mapped[UUID | None] = mapped_column(ForeignKey("payments.id"))
     rejection_reason: Mapped[str | None] = mapped_column(String(500))
+    proof_revision: Mapped[int] = mapped_column(server_default="0")
 
     @property
     def status(self) -> ReportStatus:
@@ -84,3 +88,32 @@ class PaymentReport(Base):
         if self.rejection_reason is not None:
             return ReportStatus.REJECTED
         return ReportStatus.PENDING
+
+
+class PaymentReportProof(Base):
+    __tablename__ = "payment_report_proofs"
+    __table_args__ = (
+        UniqueConstraint(
+            "report_id", "request_id", name="uq_payment_report_proofs_request"
+        ),
+        CheckConstraint("revision >= 1", name="ck_payment_report_proofs_revision"),
+        CheckConstraint(
+            f"size_bytes BETWEEN 1 AND {MAX_FILE_BYTES}",
+            name="ck_payment_report_proofs_size",
+        ),
+    )
+
+    report_id: Mapped[UUID] = mapped_column(
+        ForeignKey("payment_reports.id"), primary_key=True
+    )
+    revision: Mapped[int] = mapped_column(primary_key=True)
+    request_id: Mapped[UUID]
+    uploaded_by_id: Mapped[UUID] = mapped_column(ForeignKey("accounts.id"))
+    uploaded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    reason: Mapped[str] = mapped_column(String(500))
+    filename: Mapped[str] = mapped_column(String(200))
+    size_bytes: Mapped[int]
+    digest: Mapped[str] = mapped_column(String(64))
+    storage_key: Mapped[str] = mapped_column(String(200))

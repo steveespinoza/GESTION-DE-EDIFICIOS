@@ -4,6 +4,8 @@ El SuperAdmin puede adjuntar varios documentos y un comprobante de pago al prove
 
 Los comprobantes de pago que envía un propietario se guardan bajo `payment-proofs/` y admiten los mismos tipos y tamaño. Para descargarlos, el SuperAdmin debe abrir el reporte del edificio correspondiente. El propietario puede descargar los comprobantes que envió para sus unidades.
 
+Los reemplazos administrativos usan ese mismo prefijo y una clave distinta para cada solicitud. Cada copia conserva su entrada en PostgreSQL y el archivo de origen. El historial permite descargar cada versión con los mismos permisos del reporte. La descarga `/proof` sin parámetro sigue abriendo el original. El historial agrega el parámetro `revision` para seleccionar una copia.
+
 La API verifica la sesión y el alcance del archivo antes de generar una URL de cinco minutos. Mientras esté vigente, quien tenga el enlace puede usarlo. El navegador descarga el archivo como adjunto. [URLs firmadas de S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html)
 
 ## Configurar el bucket
@@ -42,3 +44,5 @@ Con una cuenta de propietario de prueba, envía un reporte con comprobante desde
 Cada archivo se confirma por separado. Reenviar el mismo contenido y tipo para una factura reutiliza la entrada y la clave. Si el almacenamiento acepta el archivo pero la operación queda sin confirmar, la ficha solo muestra metadatos confirmados y el reintento idempotente utiliza la misma clave.
 
 La migración protege los metadatos existentes al revertir. Antes de bajar de revisión con adjuntos registrados, conserva una copia de los metadatos y objetos para migrarlos juntos.
+
+La revisión `0011_add_report_proof_versions` asigna la versión cero a los reportes existentes. La reversión de esa revisión se detiene cuando hay reemplazos registrados para proteger los archivos y su historial.
