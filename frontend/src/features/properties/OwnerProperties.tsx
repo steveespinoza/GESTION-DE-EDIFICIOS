@@ -67,6 +67,7 @@ function MyUnit({ unitId }: { unitId: string }) {
     <section className="building-page" aria-labelledby="my-unit-title">
       <div className="building-page-heading">
         <h1 id="my-unit-title">Unidad {number}</h1>
+        <Link to="estado-de-cuenta">Estado de cuenta</Link>
       </div>
       <div className="building-grid">
         <section className="building-surface" aria-labelledby="my-unit-information">

@@ -94,7 +94,10 @@ function UnitRecord({ buildingId, unitId, mode }: { buildingId: string; unitId: 
       <Link to={unitsPath(buildingId)}>Volver a unidades</Link>
       <div className="building-page-heading">
         <h1 id="unit-title">Unidad {unit.number}</h1>
-        <Link className="button-link" to="editar">Editar unidad</Link>
+        <div className="building-form-actions">
+          <Link to="estado-de-cuenta">Estado de cuenta</Link>
+          <Link className="button-link" to="editar">Editar unidad</Link>
+        </div>
       </div>
       <div className="building-grid">
         <section className="building-surface">

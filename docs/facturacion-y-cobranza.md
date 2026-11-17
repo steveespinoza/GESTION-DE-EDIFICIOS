@@ -37,6 +37,12 @@ PostgreSQL admite una sola factura por servicio y periodo contable. Cada cargo c
 
 ## Aplicación de pagos
 
+Desde el estado de cuenta de la unidad, el SuperAdmin registra un pago recibido por un canal externo con su fecha, importe y referencia opcional. Elige el mes contable hasta el que se aplicará el pago. El registro aplica primero a los cargos pendientes más antiguos hasta ese mes, incluidos los de años anteriores. Dentro del mes, ordena por fecha de fin de cobertura y usa el identificador de factura para desempatar.
+
+El estado de cuenta muestra la deuda acumulada y el crédito por separado. El filtro mensual selecciona los cargos del mes y los pagos registrados con ese periodo de aplicación. Al abrir un pago se ven sus aplicaciones, incluidas las que cubren periodos anteriores. El crédito queda registrado con el pago que lo generó. Su aplicación posterior, el arrastre explícito y la revisión de comprobantes del propietario se incorporarán en entregas siguientes.
+
+PostgreSQL guarda el pago, sus aplicaciones y el bloqueo de las facturas afectadas en la misma transacción. Repetir la misma solicitud devuelve el pago registrado. Si la misma solicitud llega con otros datos, la API pide revisar el historial.
+
 | Situación | Resultado esperado |
 | --- | --- |
 | Se adjunta un comprobante | Queda disponible para revisión. El saldo cambia cuando se confirma el pago. |
@@ -52,6 +58,6 @@ Desde la ficha de una factura abierta, el SuperAdmin puede corregir las fechas d
 
 Cada cambio guarda la versión anterior y la nueva, junto con el motivo, la cuenta y la fecha. Si la factura cambió mientras estaba abierta en otra sesión, la API rechaza el guardado y pide recargar la ficha.
 
-La API protege los cargos de una factura marcada con movimientos contables. Cuando se implemente cobranzas, la primera aplicación de un pago confirmado o un arrastre deberá marcar la factura dentro de la misma transacción y bajo el mismo bloqueo de fila que la corrección. Si un cargo ya tiene esos movimientos, la diferencia deberá registrarse como un ajuste vinculado al cargo de origen. El estado de cuenta y las exportaciones se reconciliarán con esos movimientos. Regenerar un recibo crea una nueva versión con los datos de emisión del periodo.
+La primera aplicación de un pago marca su factura dentro de la misma transacción. Así, la API protege los cargos de esa factura ante una corrección directa. El arrastre deberá respetar el mismo bloqueo. Cuando un cargo tenga esos movimientos, la diferencia se registrará como un ajuste vinculado al cargo de origen. El estado de cuenta y las exportaciones se reconciliarán con esos movimientos. Regenerar un recibo crea una nueva versión con los datos de emisión del periodo.
 
-Quedan por definir el orden para aplicar un pago parcial, el tratamiento de meses omitidos, la emisión de ajustes sobre cargos con movimientos y las columnas del Excel de transparencia.
+Quedan por definir el tratamiento de meses omitidos, la emisión de ajustes sobre cargos con movimientos y las columnas del Excel de transparencia.

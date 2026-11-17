@@ -5,6 +5,7 @@ from sqlalchemy import create_engine, pool
 
 from app.billing import attachment_models  # noqa: F401 -- Registers invoice file metadata.
 from app.billing import models as billing_models  # noqa: F401 -- Registers billing tables.
+from app.collections import models as collection_models  # noqa: F401 -- Registers payment tables.
 from app.database import Base
 from app.identity import models  # noqa: F401 -- Registers identity tables in Base.metadata.
 from app.properties import models as properties_models  # noqa: F401 -- Registers property tables.
