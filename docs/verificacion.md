@@ -92,3 +92,10 @@ Completar el arranque descrito en el [README](../README.md#desarrollo-local) y u
 2. Registrar S/ 10,00 con fecha de recepción y enero como mes de aplicación. Deben quedar S/ 90,00 pendientes. Al abrir el detalle del pago se ve una aplicación de S/ 10,00 al cargo de diciembre.
 3. Registrar S/ 95,00 con el mismo mes de aplicación. El detalle muestra S/ 40,00 aplicados a diciembre y S/ 50,00 a enero, con S/ 5,00 de crédito. Repetir con la misma clave de solicitud debe conservar un solo pago de S/ 95,00.
 4. Iniciar sesión como Propietario y entrar al estado de cuenta de la unidad. Comprobar el filtro de periodo, el crédito y el detalle de las aplicaciones. Una unidad ajena devuelve `404`. El [contrato y los efectos persistidos](../backend/tests/test_collections.py) se comprueban con PostgreSQL.
+
+## Recorrido de reportes de pago
+
+1. Como Propietario, enviar un reporte con un PDF desde el estado de cuenta. Debe aparecer como «Pendiente de revisión» y el total pendiente conserva su importe.
+2. Como SuperAdmin, abrir «Reportes de pago» desde el edificio y descargar el comprobante. Aprobar indicando el importe efectivamente recibido. Al repetir la misma aprobación, el estado de cuenta debe mostrar un solo pago.
+3. Enviar otro reporte y rechazarlo con un motivo. El propietario debe ver el motivo en su historial y la deuda debe reflejar solo el pago aprobado.
+4. Las [pruebas de API](../backend/tests/test_collections.py) verifican acceso por titular y edificio, formatos, tamaño, reintento tras error de almacenamiento y enlace temporal. El recorrido local usa un adaptador de prueba. La validación con el bucket está en la [guía de S3](archivos-s3.md).

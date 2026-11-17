@@ -3,7 +3,8 @@
   gap: 1rem;
 }
 
-.statement-period label {
+.statement-period label,
+.report-status-filter {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
@@ -12,4 +13,22 @@
 
 .unit-statement summary {
   cursor: pointer;
+}
+
+.payment-report-history {
+  margin-top: 1rem;
+}
+
+.payment-review-forms {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.report-input {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.unit-statement input[type="file"] {
+  width: 100%;
 }

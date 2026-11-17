@@ -39,7 +39,11 @@ PostgreSQL admite una sola factura por servicio y periodo contable. Cada cargo c
 
 Desde el estado de cuenta de la unidad, el SuperAdmin registra un pago recibido por un canal externo con su fecha, importe y referencia opcional. Elige el mes contable hasta el que se aplicará el pago. El registro aplica primero a los cargos pendientes más antiguos hasta ese mes, incluidos los de años anteriores. Dentro del mes, ordena por fecha de fin de cobertura y usa el identificador de factura para desempatar.
 
-El estado de cuenta muestra la deuda acumulada y el crédito por separado. El filtro mensual selecciona los cargos del mes y los pagos registrados con ese periodo de aplicación. Al abrir un pago se ven sus aplicaciones, incluidas las que cubren periodos anteriores. El crédito queda registrado con el pago que lo generó. Su aplicación posterior, el arrastre explícito y la revisión de comprobantes del propietario se incorporarán en entregas siguientes.
+El estado de cuenta muestra la deuda acumulada y el crédito por separado. El filtro mensual selecciona los cargos del mes y los pagos registrados con ese periodo de aplicación. Al abrir un pago se ven sus aplicaciones, incluidas las que cubren periodos anteriores. El crédito queda registrado con el pago que lo generó. Quedan pendientes su aplicación posterior y el arrastre explícito.
+
+El propietario puede enviar un reporte desde el estado de cuenta. Indica el periodo de aplicación, la fecha y el importe del pago, y adjunta un comprobante. El SuperAdmin lo revisa desde «Reportes de pago» en el edificio. Al aprobar, confirma el importe y la fecha efectivamente recibidos. El reporte conserva los datos declarados y el identificador del pago generado. Al rechazar, el SuperAdmin registra un motivo visible para el propietario.
+
+La aprobación aplica el pago y registra la decisión dentro de la misma transacción. Dos aprobaciones iguales producen un solo pago. Un reporte pendiente o rechazado deja el saldo tal como estaba.
 
 PostgreSQL guarda el pago, sus aplicaciones y el bloqueo de las facturas afectadas en la misma transacción. Repetir la misma solicitud devuelve el pago registrado. Si la misma solicitud llega con otros datos, la API pide revisar el historial.
 

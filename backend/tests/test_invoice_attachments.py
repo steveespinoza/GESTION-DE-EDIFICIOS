@@ -172,7 +172,7 @@ def test_rejects_invalid_empty_and_oversized_uploads(
     )
     assert upload(admin, own, session_header, body=b"").status_code == 422
     assert upload(admin, own, {}).status_code == 403
-    monkeypatch.setattr("app.billing.attachment_router.MAX_FILE_BYTES", 32)
+    monkeypatch.setattr("app.storage.http.MAX_FILE_BYTES", 32)
     assert upload(admin, own, session_header, body=PDF + b"X" * 64).status_code == 413
     stream = iter((b"%PDF-", b"X" * 64))
     assert upload(admin, own, session_header, body=stream).status_code == 413

@@ -8,10 +8,9 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_vali
 from app.billing.invoice_schemas import AccountingPeriod
 
 
-class PaymentInput(AccountingPeriod):
+class PaymentValues(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    request_id: UUID
     received_on: date
     amount: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
     reference: Annotated[str, StringConstraints(max_length=120)] | None = None
@@ -20,6 +19,10 @@ class PaymentInput(AccountingPeriod):
     @classmethod
     def normalize_reference(cls, value: object) -> object:
         return (value.strip() or None) if isinstance(value, str) else value
+
+
+class PaymentInput(AccountingPeriod, PaymentValues):
+    request_id: UUID
 
 
 class StatementCharge(AccountingPeriod):
