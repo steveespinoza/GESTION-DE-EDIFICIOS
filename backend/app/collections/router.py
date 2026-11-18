@@ -3,7 +3,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 
-from app.collections import service
+from app.collections import deadlines, overview, service
+from app.collections.deadline_schemas import (
+    CollectionOverview,
+    DeadlineDetail,
+    DeadlineInput,
+)
 from app.collections.schemas import PaymentDetail, PaymentInput, Statement
 from app.dependencies import RequestSession
 from app.identity.models import RoleName
@@ -14,6 +19,39 @@ router = APIRouter(tags=["Cobranzas"])
 Admin = Annotated[SessionUser, Depends(require_role(RoleName.SUPERADMIN))]
 Owner = Annotated[SessionUser, Depends(require_role(RoleName.OWNER))]
 ADMIN_UNIT = "/api/admin/buildings/{building_id}/units/{unit_id}"
+
+
+@router.get("/api/admin/buildings/{building_id}/collections")
+def collection_overview(
+    building_id: UUID, db: RequestSession, _user: Admin
+) -> CollectionOverview:
+    try:
+        return overview.read_overview(db, building_id)
+    except deadlines.BuildingNotFound as error:
+        raise HTTPException(404, "Edificio no encontrado.") from error
+
+
+@router.post(
+    "/api/admin/buildings/{building_id}/collection-deadlines",
+    status_code=201,
+    dependencies=[Depends(require_session_header)],
+)
+def save_deadline(
+    building_id: UUID,
+    data: DeadlineInput,
+    db: RequestSession,
+    user: Admin,
+    response: Response,
+) -> DeadlineDetail:
+    try:
+        detail, created = deadlines.record_deadline(db, building_id, user.id, data)
+    except deadlines.BuildingNotFound as error:
+        raise HTTPException(404, "Edificio no encontrado.") from error
+    except deadlines.DeadlineConflict as error:
+        raise HTTPException(409, str(error)) from error
+    if not created:
+        response.status_code = 200
+    return detail
 
 
 @router.get(f"{ADMIN_UNIT}/statement")

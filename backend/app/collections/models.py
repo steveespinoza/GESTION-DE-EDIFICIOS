@@ -16,6 +16,42 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 
 
+class CollectionDeadline(Base):
+    __tablename__ = "collection_deadlines"
+    __table_args__ = (
+        UniqueConstraint(
+            "building_id", "request_id", name="uq_collection_deadlines_request"
+        ),
+        UniqueConstraint(
+            "building_id",
+            "billing_year",
+            "billing_month",
+            "revision",
+            name="uq_collection_deadlines_revision",
+        ),
+        CheckConstraint(
+            "billing_year BETWEEN 2020 AND 9999", name="ck_collection_deadlines_year"
+        ),
+        CheckConstraint(
+            "billing_month BETWEEN 1 AND 12", name="ck_collection_deadlines_month"
+        ),
+        CheckConstraint("revision >= 1", name="ck_collection_deadlines_revision"),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    building_id: Mapped[UUID] = mapped_column(ForeignKey("buildings.id"))
+    billing_year: Mapped[int]
+    billing_month: Mapped[int]
+    revision: Mapped[int]
+    request_id: Mapped[UUID]
+    due_date: Mapped[date]
+    reason: Mapped[str] = mapped_column(String(500))
+    recorded_by_id: Mapped[UUID] = mapped_column(ForeignKey("accounts.id"))
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
 class Payment(Base):
     __tablename__ = "payments"
     __table_args__ = (

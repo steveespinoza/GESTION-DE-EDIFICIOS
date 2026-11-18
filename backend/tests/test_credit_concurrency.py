@@ -19,8 +19,11 @@ from app.billing.models import (
     ServiceInvoice,
     UnitCharge,
 )
+from app.collections.deadline_schemas import DeadlineInput
+from app.collections.deadlines import DeadlineConflict, record_deadline
 from app.collections.models import (
     BalanceCarryForward,
+    CollectionDeadline,
     Payment,
     PaymentApplication,
     PaymentApplicationRelease,
@@ -101,6 +104,11 @@ def committed_portfolio(engine, test_password_hash):
                 delete(ServiceCategory).where(ServiceCategory.id.in_(categories))
             )
             db.execute(delete(Unit).where(Unit.id == unit_id))
+            db.execute(
+                delete(CollectionDeadline).where(
+                    CollectionDeadline.building_id == building_id
+                )
+            )
             db.execute(delete(Building).where(Building.id == building_id))
             db.execute(delete(Account).where(Account.id == owner_id))
 
@@ -365,3 +373,45 @@ def test_adjustment_racing_with_payment_reconciles_the_original_charge(
             for payment in result.payments
             for item in payment.applications
         ) == Decimal("110.00")
+
+
+@pytest.mark.parametrize("same_request", [True, False])
+def test_simultaneous_deadlines_preserve_one_revision(
+    engine, committed_portfolio, same_request
+):
+    building, actor, _, _ = committed_portfolio
+    first = DeadlineInput(
+        request_id=uuid4(),
+        revision=0,
+        billing_year=2026,
+        billing_month=12,
+        due_date="2027-01-10",
+        reason="Acuerdo de prueba",
+    )
+    second = first if same_request else first.model_copy(update={"request_id": uuid4()})
+    barrier = Barrier(2)
+
+    def run(data):
+        with Session(engine) as db:
+            db.connection()
+            barrier.wait(timeout=10)
+            try:
+                detail, created = record_deadline(db, building, actor, data)
+                return (str(detail.id), created)
+            except DeadlineConflict:
+                db.rollback()
+                return ("conflict", False)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        attempts = [executor.submit(run, item) for item in (first, second)]
+        results = [attempt.result(timeout=20) for attempt in attempts]
+    assert sum(created for _, created in results) == 1
+    if same_request:
+        assert results[0][0] == results[1][0]
+    else:
+        assert sum(identifier == "conflict" for identifier, _ in results) == 1
+    with Session(engine) as db:
+        entries = db.scalars(
+            select(CollectionDeadline).where(CollectionDeadline.building_id == building)
+        ).all()
+        assert len(entries) == 1 and entries[0].revision == 1

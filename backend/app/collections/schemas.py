@@ -36,6 +36,8 @@ class StatementCharge(AccountingPeriod):
     applied: Decimal
     balance: Decimal
     consumption: Decimal | None
+    due_date: date | None
+    overdue: bool
 
 
 class AppliedCharge(AccountingPeriod):
@@ -75,6 +77,8 @@ class Statement(BaseModel):
     building_name: str
     balance: Decimal
     credit: Decimal
+    as_of: date
+    overdue_balance: Decimal
     charges: list[StatementCharge]
     payments: list[PaymentDetail]
     carry_forwards: list[CarryForwardDetail]
