@@ -99,7 +99,7 @@ Completar el arranque descrito en el [README](../README.md#desarrollo-local) y u
 ## Recorrido de registro de pagos
 
 1. Registrar dos facturas de S/ 50,00 para una misma unidad en diciembre y enero. Como SuperAdmin, abrir la unidad y elegir «Estado de cuenta». Debe mostrar S/ 100,00 pendientes.
-2. Registrar S/ 10,00 con fecha de recepción y enero como mes de aplicación. Deben quedar S/ 90,00 pendientes. Al abrir el detalle del pago se ve una aplicación de S/ 10,00 al cargo de diciembre.
+2. Registrar S/ 10,00 con fecha de recepción y enero como mes de aplicación. Deben quedar S/ 90,00 pendientes. Al abrir el detalle del pago se ve una aplicación de S/ 10,00 al cargo de diciembre. El periodo indicado queda como referencia del pago.
 3. Registrar S/ 95,00 con el mismo mes de aplicación. El detalle muestra S/ 40,00 aplicados a diciembre y S/ 50,00 a enero, con S/ 5,00 de crédito. Repetir con la misma clave de solicitud debe conservar un solo pago de S/ 95,00.
 4. Iniciar sesión como Propietario y entrar al estado de cuenta de la unidad. Comprobar el filtro de periodo, el crédito y el detalle de las aplicaciones. Una unidad ajena devuelve `404`. El [contrato y los efectos persistidos](../backend/tests/test_collections.py) se comprueban con PostgreSQL.
 
@@ -116,3 +116,23 @@ Completar el arranque descrito en el [README](../README.md#desarrollo-local) y u
 2. Descargar ambas versiones y comprobar que cada una corresponde a su archivo. Iniciar sesión como el propietario que envió el reporte y comprobar el mismo historial.
 3. Abrir el reporte en dos sesiones. Reemplazar el archivo desde una e intentar aprobar desde la otra. La API debe devolver `409` y pedir actualizar el reporte.
 4. Actualizar la bandeja, revisar la versión vigente y aprobar. El pago se aplica una sola vez y el historial del comprobante sigue disponible. Las [pruebas de integración](../backend/tests/test_collections.py) también verifican permisos, reintentos y recuperación tras un error de almacenamiento.
+
+## Recorrido de crédito automático y arrastres
+
+El 17 de noviembre de 2026 comprobé este cambio con PostgreSQL 17 aislado. La suite completa pasó con 98 pruebas. Ruff, formato, TypeScript, compilación y `alembic check` forman parte de la validación local. La prueba de migración crea un esquema independiente en la revisión 0011 con un pago, crédito y aplicación existentes, comprueba su conservación al subir a 0012 y verifica la protección del rollback con arrastres.
+
+Las pruebas concurrentes ejecutan emisión y pago sobre el mismo crédito, dos facturas de servicios distintos para el mismo periodo y dos confirmaciones del mismo pago. Comprueban los saldos persistidos y la unicidad de aplicaciones y arrastres. Otro caso fuerza un fallo después de conciliar y comprueba que la factura, el crédito y las constancias se revierten juntos.
+
+El recorrido de navegador usó una API, un frontend y una base de pruebas independientes, con datos ficticios. Como SuperAdmin abrí una unidad con dos cargos de S/ 50,00 y un pago de S/ 70,00. El segundo cargo recibió automáticamente S/ 20,00 de crédito y mostró S/ 30,00 pendientes. Abrí el detalle del pago con Enter y comprobé la aplicación, su fecha y la cuenta que registró la operación.
+
+Como segundo propietario abrí su propia unidad. El saldo de diciembre de S/ 50,00 quedó vinculado a febrero, omitiendo enero sin factura. El pendiente total fue S/ 100,00 por sus dos cargos. Seleccioné febrero con teclado y comprobé el cargo del mes junto con la constancia del saldo anterior. En una vista de 390 píxeles los bloques se apilaron y el contenido no desbordó horizontalmente.
+
+Para reproducir el flujo:
+
+1. Aplicar `alembic upgrade head` a una base de pruebas y crear dos unidades de propietarios diferentes.
+2. Emitir diciembre con S/ 50,00 por unidad. Registrar S/ 70,00 en una de ellas: quedan S/ 20,00 de crédito.
+3. Emitir febrero, sin factura en enero. La primera unidad queda con S/ 30,00 pendientes y crédito cero. La otra conserva S/ 100,00 pendientes y un arrastre de S/ 50,00 desde diciembre.
+4. Consultar ambos estados de cuenta con sus propietarios. Cada uno debe ver solamente su unidad. En el filtro mensual, los pagos anteriores con aplicaciones al mes también quedan disponibles para consultar su detalle.
+5. Registrar un pago sobre el saldo arrastrado. La constancia conserva el importe histórico y muestra el pendiente actual del cargo. La factura de origen sigue bloqueada para correcciones directas.
+
+La conciliación y la protección entre dos propietarios también se verifican en API. La migración `0012_automatic_credit_and_carry` se aplicó a la base de demostración en Neon el 17 de noviembre de 2026. `alembic check` confirmó la correspondencia del esquema con los modelos. La base quedó con 17 tablas. La comparación de huellas antes y después conservó los registros de siete tablas financieras y comprobó la fecha y el responsable de las aplicaciones anteriores. El recorrido de interfaz de esta entrega usó PostgreSQL aislado; queda por repetirlo con Neon y comprobar el despliegue en Vercel y Render. Los objetos de S3 no se modificaron.

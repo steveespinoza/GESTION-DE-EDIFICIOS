@@ -21,7 +21,21 @@ export interface Payment extends Period {
   amount: string
   credit: string
   reference: string | null
-  applications: (Period & { charge_id: string; service: string; amount: string })[]
+  applications: (Period & {
+    charge_id: string; service: string; amount: string
+    applied_at: string; applied_by: string | null; automatic: boolean
+  })[]
+}
+
+export interface CarryForward extends Period {
+  charge_id: string
+  source_year: number
+  source_month: number
+  service: string
+  amount: string
+  balance: string
+  recorded_at: string
+  recorded_by: string | null
 }
 
 export interface Statement {
@@ -31,6 +45,7 @@ export interface Statement {
   credit: string
   charges: Charge[]
   payments: Payment[]
+  carry_forwards: CarryForward[]
 }
 
 export type PaymentValues = Pick<Payment, 'received_on' | 'amount' | 'reference'>

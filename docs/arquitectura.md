@@ -75,6 +75,7 @@ erDiagram
     REPORTE_PAGO o|--o| PAGO : respalda
     PAGO ||--o{ APLICACION_PAGO : distribuye
     CARGO ||--o{ APLICACION_PAGO : recibe
+    CARGO ||--o{ ARRASTRE_SALDO : conserva
     UNIDAD ||--o{ RECIBO_VERSION : conserva
     EDIFICIO ||--o{ INCIDENCIA : recibe
     UNIDAD o|--o{ INCIDENCIA : ubica
@@ -83,3 +84,9 @@ erDiagram
 ```
 
 Las relaciones muestran el diseño previsto. Cada servicio pertenece a un edificio, y los equipos dependen de ese mismo límite. Una incidencia de área común pertenece al edificio y puede registrarse sin una unidad como ubicación. Un pago registrado por administración puede existir sin un reporte previo. Un cargo puede surgir de una factura o de un ajuste contable. Las tablas y restricciones definitivas quedarán en las primeras migraciones.
+
+## Crédito automático y arrastres
+
+Facturación llama a la conciliación de cobranzas después de registrar los cargos y antes de confirmar la transacción. Cobranzas usa el mismo bloqueo del edificio al confirmar pagos y reportes. El crédito disponible se consume dentro de la unidad por orden de registro del pago y antigüedad del cargo. Las aplicaciones conservan fecha, responsable y uso automático.
+
+`balance_carry_forwards` registra una constancia por cargo y periodo posterior con actividad. El saldo total se calcula con cargos y aplicaciones; las constancias preservan el historial del arrastre. El primer arrastre bloquea la factura de origen. La [decisión financiera](decisiones/0001-creditos-y-arrastres.md) detalla el contrato y su recuperación.

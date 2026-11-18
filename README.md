@@ -2,11 +2,11 @@
 
 Aplicación para administrar edificios residenciales, repartir gastos de servicios y consultar estados de cuenta. La administración registra facturas, valida pagos, atiende incidencias y lleva el historial de mantenimiento. Cada propietario puede consultar las unidades asociadas a su cuenta y reportar pagos hechos por un canal externo.
 
-Este proyecto parte de un sistema de gestión inmobiliaria que desarrollé anteriormente. Desde «Edificios», el SuperAdmin administra el padrón y los servicios, registra facturas lineales o por consumo medido y consulta el desglose de cargos por unidad. En «Mis propiedades», el propietario consulta las unidades asociadas a su cuenta y las instrucciones de pago. Los estados de cuenta se incorporarán en una entrega posterior.
+Este proyecto parte de un sistema de gestión inmobiliaria que desarrollé anteriormente. Desde «Edificios», el SuperAdmin administra el padrón y los servicios, registra facturas lineales o por consumo medido y consulta el desglose de cargos por unidad. En «Mis propiedades», el propietario consulta las unidades asociadas a su cuenta y las instrucciones de pago. El estado de cuenta muestra cargos, pagos, aplicaciones automáticas del crédito y arrastres vinculados a su cargo de origen.
 
 ## Arquitectura
 
-El frontend usa React y TypeScript. La API usa FastAPI y crecerá como un monolito modular con SQLAlchemy, PostgreSQL y Alembic. Los comprobantes, las evidencias y los recibos se guardarán en S3 cuando se implementen esos flujos.
+El frontend usa React y TypeScript. La API usa FastAPI y crecerá como un monolito modular con SQLAlchemy, PostgreSQL y Alembic. Los adjuntos del proveedor y los comprobantes de pago se guardan en S3 privado. Las evidencias de incidencias y los recibos se incorporarán con esos módulos.
 
 ## Desarrollo local
 

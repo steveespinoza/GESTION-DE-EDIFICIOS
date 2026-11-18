@@ -17,6 +17,7 @@ from app.billing.invoices import (
 )
 from app.billing.metering import metered_records, to_milli
 from app.billing.models import InvoiceCorrection
+from app.collections.ledger import settle_building
 from app.properties.service import lock_building
 
 
@@ -72,6 +73,7 @@ def correct_invoice(
     invoice.start_date = data.start_date
     invoice.end_date = data.end_date
 
+    settle_building(db, building_id, corrected_by)
     after = invoice_detail(invoice, category_name, charges, readings)
     if after != before:
         invoice.revision += 1

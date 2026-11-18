@@ -62,3 +62,30 @@ class PaymentApplication(Base):
         ForeignKey("unit_charges.id"), primary_key=True
     )
     amount_cents: Mapped[int] = mapped_column(BigInteger)
+    applied_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    applied_by_id: Mapped[UUID | None] = mapped_column(ForeignKey("accounts.id"))
+    automatic: Mapped[bool] = mapped_column(default=False, server_default="false")
+
+
+class BalanceCarryForward(Base):
+    __tablename__ = "balance_carry_forwards"
+    __table_args__ = (
+        CheckConstraint("billing_year BETWEEN 2020 AND 9999", name="ck_carry_year"),
+        CheckConstraint("billing_month BETWEEN 1 AND 12", name="ck_carry_month"),
+        CheckConstraint(
+            "amount_cents BETWEEN 1 AND 999999999999", name="ck_carry_amount"
+        ),
+    )
+
+    charge_id: Mapped[UUID] = mapped_column(
+        ForeignKey("unit_charges.id"), primary_key=True
+    )
+    billing_year: Mapped[int] = mapped_column(primary_key=True)
+    billing_month: Mapped[int] = mapped_column(primary_key=True)
+    amount_cents: Mapped[int] = mapped_column(BigInteger)
+    recorded_by_id: Mapped[UUID | None] = mapped_column(ForeignKey("accounts.id"))
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

@@ -37,11 +37,11 @@ PostgreSQL admite una sola factura por servicio y periodo contable. Cada cargo c
 
 ## Aplicación de pagos
 
-Desde el estado de cuenta de la unidad, el SuperAdmin registra un pago recibido por un canal externo con su fecha, importe y referencia opcional. Elige el mes contable hasta el que se aplicará el pago. El registro aplica primero a los cargos pendientes más antiguos hasta ese mes, incluidos los de años anteriores. Dentro del mes, ordena por fecha de fin de cobertura y usa el identificador de factura para desempatar.
+Desde el estado de cuenta de la unidad, el SuperAdmin registra un pago recibido por un canal externo con su fecha, importe y referencia opcional. Indica el periodo de referencia del pago. El registro aplica primero a los cargos pendientes más antiguos de la unidad, incluidos los de años anteriores. Dentro del mes, ordena por fecha de fin de cobertura y usa el identificador de factura para desempatar.
 
-El estado de cuenta muestra la deuda acumulada y el crédito por separado. El filtro mensual selecciona los cargos del mes y los pagos registrados con ese periodo de aplicación. Al abrir un pago se ven sus aplicaciones, incluidas las que cubren periodos anteriores. El crédito queda registrado con el pago que lo generó. Quedan pendientes su aplicación posterior y el arrastre explícito.
+El estado de cuenta muestra la deuda acumulada y el crédito por separado. El filtro mensual selecciona los cargos del mes, los pagos con ese periodo de referencia y los pagos anteriores aplicados a sus cargos. Al abrir un pago se ven sus aplicaciones, incluidas las que cubren periodos anteriores. El crédito queda registrado con el pago que lo generó y se aplica automáticamente al emitir o corregir facturas y al confirmar pagos. Se usan primero los créditos más antiguos por fecha de registro e identificador. Cada aplicación conserva cargo, fecha, responsable e indicación de uso automático. El saldo pertenece a la unidad, incluso si su propietario tiene otras propiedades.
 
-El propietario puede enviar un reporte desde el estado de cuenta. Indica el periodo de aplicación, la fecha y el importe del pago, y adjunta un comprobante. El SuperAdmin lo revisa desde «Reportes de pago» en el edificio. Al aprobar, confirma el importe y la fecha efectivamente recibidos. El reporte conserva los datos declarados y el identificador del pago generado. Al rechazar, el SuperAdmin registra un motivo visible para el propietario.
+El propietario puede enviar un reporte desde el estado de cuenta. Indica el periodo de referencia, la fecha y el importe del pago, y adjunta un comprobante. El SuperAdmin lo revisa desde «Reportes de pago» en el edificio. Al aprobar, confirma el importe y la fecha efectivamente recibidos. El reporte conserva los datos declarados y el identificador del pago generado. Al rechazar, el SuperAdmin registra un motivo visible para el propietario.
 
 La aprobación aplica el pago y registra la decisión dentro de la misma transacción. Dos aprobaciones iguales producen un solo pago. Un reporte pendiente o rechazado deja el saldo tal como estaba.
 
@@ -60,12 +60,20 @@ PostgreSQL guarda el pago, sus aplicaciones y el bloqueo de las facturas afectad
 | Se arrastra un saldo | El movimiento conserva el vínculo con el cargo y el periodo de origen. El cambio de diciembre a enero conserva ese vínculo. |
 | Se repite una confirmación | La misma operación tiene un solo efecto, incluso ante solicitudes concurrentes. |
 
+## Arrastre de saldos
+
+Al abrir un periodo con una factura, el sistema conserva por cada cargo anterior pendiente su saldo, periodo de destino, fecha y responsable. El cargo mantiene su identidad y periodo de origen. El arrastre no agrega un segundo cargo al total de deuda. Los meses sin actividad se omiten y una factura fuera de orden puede registrar su saldo hacia periodos posteriores existentes.
+
+El crédito se aplica antes de registrar nuevos arrastres. Una constancia ya registrada conserva su importe inicial aunque después se pague el cargo; el estado de cuenta muestra también su pendiente actual. Más servicios del mismo mes o solicitudes simultáneas conservan una sola constancia por cargo y periodo.
+
+La [decisión de créditos y arrastres](decisiones/0001-creditos-y-arrastres.md) detalla el cambio del periodo de pago, los contratos y la migración.
+
 ## Correcciones y recibos
 
 Desde la ficha de una factura abierta, el SuperAdmin puede corregir las fechas de cobertura y el importe. Para una factura medida también puede corregir el volumen y las lecturas compatibles con las facturas vecinas. La corrección conserva el servicio, el periodo contable, los adjuntos y las unidades de la emisión original. Los cargos mantienen su identidad y se recalculan al céntimo dentro de la misma transacción.
 
 Cada cambio guarda la versión anterior y la nueva, junto con el motivo, la cuenta y la fecha. Si la factura cambió mientras estaba abierta en otra sesión, la API rechaza el guardado y pide recargar la ficha.
 
-La primera aplicación de un pago marca su factura dentro de la misma transacción. Así, la API protege los cargos de esa factura ante una corrección directa. El arrastre deberá respetar el mismo bloqueo. Cuando un cargo tenga esos movimientos, la diferencia se registrará como un ajuste vinculado al cargo de origen. El estado de cuenta y las exportaciones se reconciliarán con esos movimientos. Regenerar un recibo crea una nueva versión con los datos de emisión del periodo.
+La primera aplicación de un pago marca su factura dentro de la misma transacción. Así, la API protege los cargos de esa factura ante una corrección directa. El primer arrastre también marca la factura y conserva ese mismo bloqueo. Cuando un cargo tenga esos movimientos, la diferencia se registrará como un ajuste vinculado al cargo de origen. El estado de cuenta y las exportaciones se reconciliarán con esos movimientos. Regenerar un recibo crea una nueva versión con los datos de emisión del periodo.
 
-Quedan por definir el tratamiento de meses omitidos, la emisión de ajustes sobre cargos con movimientos y las columnas del Excel de transparencia.
+Quedan por definir la emisión de ajustes sobre cargos con movimientos y las columnas del Excel de transparencia.

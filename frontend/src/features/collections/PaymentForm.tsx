@@ -47,11 +47,11 @@ export function PaymentForm({ buildingId, unitId, period, onSaved }: Props) {
       <h2 id="register-payment-title">Registrar pago recibido</h2>
       <form className="building-form" onSubmit={submit} aria-busy={saving}>
         <fieldset className="building-form-grid" disabled={saving}>
-          <legend>Aplicar a cargos hasta</legend>
+          <legend>Periodo de referencia del pago</legend>
           <PaymentPeriodFields period={period} />
           <PaymentFields />
         </fieldset>
-        <p>Se aplicará primero a los cargos más antiguos. El excedente se registra como crédito.</p>
+        <p>Se aplicará primero a los cargos pendientes más antiguos de esta unidad. El excedente cubrirá automáticamente nuevos cargos.</p>
         {error && <p className="form-error" role="alert">{error}</p>}
         <button type="submit" disabled={saving}>{saving ? 'Registrando…' : 'Registrar pago'}</button>
       </form>

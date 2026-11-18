@@ -65,7 +65,7 @@ Si la unidad no está asociada a su cuenta, el sistema deniega también el acces
 
 1. En la bandeja de cobranzas, selecciona la unidad y el periodo. Revisa el saldo, el vencimiento y el comprobante recibido, si existe.
 2. Revisa la versión vigente del comprobante y registra la fecha y el monto efectivamente recibidos. Puede cargar una copia legible indicando el motivo. El original y las versiones anteriores quedan disponibles en el historial.
-3. El sistema registra la confirmación, aplica el monto y actualiza el detalle del pago. Si hay una diferencia, queda identificado el saldo pendiente o el crédito.
+3. El sistema registra la confirmación, aplica el monto y actualiza el detalle del pago. Si hay una diferencia, queda identificado el saldo pendiente o el crédito. El crédito se aplica automáticamente a los cargos pendientes de esa unidad y a los que se emitan después. El periodo del pago queda como referencia.
 
 Reintentar la misma aprobación tiene un solo efecto contable. El arrastre al periodo siguiente conserva una referencia a su origen.
 

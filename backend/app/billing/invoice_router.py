@@ -104,9 +104,10 @@ def create_invoice(
     building_id: UUID,
     data: LinearInvoiceInput | MeteredInvoiceInput,
     db: RequestSession,
+    user: CurrentUser,
 ) -> InvoiceDetail:
     try:
-        return invoices.create_invoice(db, building_id, data)
+        return invoices.create_invoice(db, building_id, data, user.id)
     except invoices.InvoiceNotFound as error:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(error)
