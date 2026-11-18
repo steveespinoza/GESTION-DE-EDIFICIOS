@@ -16,6 +16,7 @@ from app.collections.service import (
 )
 from app.documents.models import Receipt
 from app.documents.pdf import render_receipt
+from app.documents.period import EmptyPeriod, period_charges
 from app.documents.schemas import (
     ReceiptCharge,
     ReceiptDetail,
@@ -126,12 +127,11 @@ def capture(
 ) -> ReceiptSnapshot:
     statement = read_statement(db, unit.id, building_id=building.id)
     period = (data.billing_year, data.billing_month)
-    in_period = lambda item: (item.billing_year, item.billing_month) == period
     through_period = lambda item: (item.billing_year, item.billing_month) <= period
-    if not any(in_period(charge) for charge in statement.charges):
-        raise ReceiptConflict(
-            "El periodo seleccionado no tiene cargos para esta unidad."
-        )
+    try:
+        current_charges, earlier_charges = period_charges(statement, *period)
+    except EmptyPeriod as error:
+        raise ReceiptConflict(str(error)) from error
     readings = {
         charge_id: (previous, current, common)
         for charge_id, previous, current, common in db.execute(
@@ -161,12 +161,8 @@ def capture(
             original_common_amount=money(common) if common is not None else None,
         )
 
-    charges = [charge_snapshot(c) for c in statement.charges if in_period(c)]
-    earlier = [
-        charge_snapshot(c)
-        for c in statement.charges
-        if through_period(c) and not in_period(c) and c.balance > 0
-    ]
+    charges = [charge_snapshot(c) for c in current_charges]
+    earlier = [charge_snapshot(c) for c in earlier_charges]
     payments = []
     for payment in statement.payments:
         applied = sum(

@@ -228,3 +228,23 @@ Para reproducir:
 La suite completa pasó con **136 pruebas** en PostgreSQL 17 aislado. Ruff, formato, `alembic check`, TypeScript y compilación fueron correctos. La prueba de migración sube desde 0014 con cargos, pagos, aplicaciones y vencimientos, conserva sus datos y protege el descenso con recibos existentes. Las pruebas de PDF contrastan contenido, importes, fechas, versiones, texto con caracteres especiales y generación simultánea de documentos. La [decisión de recibos](decisiones/0004-recibos-pdf-versionados.md) detalla los contratos y la recuperación.
 
 El 18 de noviembre de 2026 apliqué `0015_versioned_receipts` a Neon desde 0014. Las huellas anteriores y posteriores coincidieron en catorce tablas financieras, incluidos los vencimientos. La base quedó con veintiuna tablas, sin recibos creados automáticamente, y `alembic check` no detectó diferencias. La prueba de escritura de un PDF ficticio en `receipts/` del bucket real recibió `AccessDenied`; tampoco hay acceso a IAM con las credenciales del backend. Falta autorizar `s3:GetObject` y `s3:PutObject` para ese prefijo antes de repetir la validación con S3 y desplegar el flujo. El recorrido funcional descrito arriba usó almacenamiento aislado.
+
+## Recorrido del Excel de transparencia
+
+La descarga por unidad está disponible desde su estado de cuenta para Propietario y SuperAdmin. La [decisión de transparencia](decisiones/0005-excel-de-transparencia.md) define las cinco hojas, los agregados autorizados y el alcance temporal.
+
+![Descarga del Excel desde el estado de cuenta con datos ficticios](imagenes/excel-transparencia.jpg)
+
+Verificación local del 18 de noviembre de 2026:
+
+- Descargué desde el navegador como propietario para agosto y octubre, y como SuperAdmin para otra unidad. Comprobé la estructura del XLSX descargado y sus resultados: 0.00 pendiente para agosto de la unidad 001 y 163.33 para octubre de la unidad 002, incluido su pendiente anterior de 75.00.
+- Recalculé las fórmulas del ejemplo con un lector independiente y comparé cada resultado con sus importes fuente. La búsqueda de errores no encontró referencias rotas ni divisiones inválidas. Una modificación temporal del ajuste actualizó el cargo derivado; esa copia de revisión no reemplaza el archivo descargado.
+- Revisé las cinco hojas renderizadas, sus fechas, acentos, lecturas, cuotas teóricas y asignadas. El archivo conserva las cifras de origen y las fórmulas de conciliación. Las pruebas incluyen importe máximo y motivo de 500 caracteres, con filas ampliadas para textos largos.
+- Activé la descarga con Enter y comprobé el foco en el aviso. Una respuesta demorada deshabilitó selector y botón durante la preparación. Un fallo sintético mostró el error; el reintento descargó el archivo.
+- Revisé una pantalla de 390 × 844 sin desbordamiento horizontal. Una unidad sin cargos mostró el mensaje de vacío. Una segunda cuenta de propietario no pudo abrir la unidad de la primera. La API también cubre dos edificios, unidad ajena e inexistente, acceso administrativo y sesión cerrada.
+
+La suite completa pasó con **156 pruebas** en PostgreSQL 17 aislado mediante `pytest -q`, incluidas veinte pruebas nuevas de exportación. `ruff check`, `ruff format --check`, `alembic check` y `npm run build` fueron correctos.
+
+Para reproducir, crear una base aislada con `alembic upgrade head`, emitir cargos lineales y medidos, registrar pagos y ajustes y abrir el estado de cuenta de una unidad. Elegir un periodo en «Excel de transparencia», descargar y comparar Resumen, Cargos y Pagos con el estado de cuenta. Agregar una unidad después de emitir permite comprobar que Reparto conserva el divisor original.
+
+Esta entrega no modifica el esquema ni usa S3. La verificación corresponde al entorno local; quedan pendientes la apertura en Microsoft Excel de escritorio y el recorrido con el backend y frontend desplegados.

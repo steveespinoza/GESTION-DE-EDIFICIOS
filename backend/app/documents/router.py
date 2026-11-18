@@ -1,13 +1,17 @@
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.responses import RedirectResponse
 
 from app.collections.router import Admin, Owner
 from app.collections.service import UnitNotFound
 from app.dependencies import RequestSession
 from app.documents import service
+from app.documents.excel import render_transparency
+from app.documents.period import EmptyPeriod
 from app.documents.schemas import ReceiptDetail, ReceiptInput
+from app.documents.transparency import read_transparency
 from app.identity.router import require_session_header
 from app.storage.files import StorageUnavailable
 from app.storage.http import StorageFactory, private_download
@@ -15,6 +19,53 @@ from app.storage.http import StorageFactory, private_download
 router = APIRouter(tags=["Recibos"])
 ADMIN_RECEIPTS = "/api/admin/buildings/{building_id}/units/{unit_id}/receipts"
 OWNER_RECEIPTS = "/api/owner/properties/{unit_id}/receipts"
+Year = Annotated[int, Query(ge=2020, le=9999)]
+Month = Annotated[int, Query(ge=1, le=12)]
+
+
+def transparency_download(db, unit_id, billing_year, billing_month, **scope):
+    try:
+        data = read_transparency(db, unit_id, billing_year, billing_month, **scope)
+    except UnitNotFound as error:
+        raise HTTPException(404, "Unidad no encontrada.") from error
+    except EmptyPeriod as error:
+        raise HTTPException(409, str(error)) from error
+    return Response(
+        content=render_transparency(data),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Cache-Control": "no-store",
+            "Content-Disposition": f'attachment; filename="transparencia-{billing_year}-{billing_month:02}-{unit_id.hex[:8]}.xlsx"',
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.get("/api/admin/buildings/{building_id}/units/{unit_id}/transparency.xlsx")
+def admin_transparency(
+    building_id: UUID,
+    unit_id: UUID,
+    billing_year: Year,
+    billing_month: Month,
+    db: RequestSession,
+    _user: Admin,
+) -> Response:
+    return transparency_download(
+        db, unit_id, billing_year, billing_month, building_id=building_id
+    )
+
+
+@router.get("/api/owner/properties/{unit_id}/transparency.xlsx")
+def owner_transparency(
+    unit_id: UUID,
+    billing_year: Year,
+    billing_month: Month,
+    db: RequestSession,
+    user: Owner,
+) -> Response:
+    return transparency_download(
+        db, unit_id, billing_year, billing_month, owner_id=user.id
+    )
 
 
 @router.get(ADMIN_RECEIPTS)
