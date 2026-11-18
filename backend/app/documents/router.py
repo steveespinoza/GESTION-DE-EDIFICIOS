@@ -4,10 +4,13 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.responses import RedirectResponse
 
+from app.collections.deadlines import BuildingNotFound
 from app.collections.router import Admin, Owner
 from app.collections.service import UnitNotFound
 from app.dependencies import RequestSession
 from app.documents import service
+from app.documents.consolidated_pdf import render_consolidation
+from app.documents.consolidation import read_consolidation
 from app.documents.excel import render_transparency
 from app.documents.period import EmptyPeriod
 from app.documents.schemas import ReceiptDetail, ReceiptInput
@@ -21,6 +24,31 @@ ADMIN_RECEIPTS = "/api/admin/buildings/{building_id}/units/{unit_id}/receipts"
 OWNER_RECEIPTS = "/api/owner/properties/{unit_id}/receipts"
 Year = Annotated[int, Query(ge=2020, le=9999)]
 Month = Annotated[int, Query(ge=1, le=12)]
+
+
+@router.get("/api/admin/buildings/{building_id}/consolidation.pdf")
+def admin_consolidation(
+    building_id: UUID,
+    billing_year: Year,
+    billing_month: Month,
+    db: RequestSession,
+    _user: Admin,
+) -> Response:
+    try:
+        report = read_consolidation(db, building_id, billing_year, billing_month)
+    except BuildingNotFound as error:
+        raise HTTPException(404, "Edificio no encontrado.") from error
+    except EmptyPeriod as error:
+        raise HTTPException(409, str(error)) from error
+    return Response(
+        content=render_consolidation(report),
+        media_type="application/pdf",
+        headers={
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Disposition": f'attachment; filename="consolidado-{billing_year}-{billing_month:02}-{building_id.hex[:8]}.pdf"',
+        },
+    )
 
 
 def transparency_download(db, unit_id, billing_year, billing_month, **scope):
