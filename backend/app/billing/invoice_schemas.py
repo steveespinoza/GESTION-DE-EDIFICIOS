@@ -5,6 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
+from app.billing.adjustment_schemas import ChargeAdjustmentDetail
+
 METER_LIMIT_MILLI = 100_000_000
 MeterValue = Annotated[Decimal, Field(ge=0, lt=100_000, decimal_places=3)]
 
@@ -93,9 +95,12 @@ class MeteredChargeDetail(BaseModel):
 
 
 class ChargeDetail(BaseModel):
+    id: UUID
     unit_id: UUID
     unit_number: str
     amount: Decimal
+    adjusted_amount: Decimal
+    adjustment_revision: int = 0
     meter: MeteredChargeDetail | None = None
 
 
@@ -107,9 +112,11 @@ class CorrectionDetail(BaseModel):
 
 
 class InvoiceDetail(InvoiceSummary):
+    adjusted_total_amount: Decimal
     charges: list[ChargeDetail]
     total_volume: Decimal | None = None
     common_volume: Decimal | None = None
     revision: int
     accounting_locked: bool
     corrections: list[CorrectionDetail] = Field(default_factory=list)
+    adjustments: list[ChargeAdjustmentDetail] = Field(default_factory=list)

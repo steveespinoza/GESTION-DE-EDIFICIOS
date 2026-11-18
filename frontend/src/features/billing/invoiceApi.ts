@@ -19,6 +19,23 @@ export interface CorrectionInput extends InvoiceValues {
   reason: string
 }
 
+export interface ChargeAdjustment {
+  id: string
+  charge_id: string
+  unit_number: string
+  service: string
+  billing_year: number
+  billing_month: number
+  revision: number
+  previous_amount: string
+  new_amount: string
+  difference: string
+  released_credit: string
+  reason: string
+  recorded_by: string
+  recorded_at: string
+}
+
 interface MeterReadingInput {
   unit_id: string
   previous_reading: string
@@ -38,15 +55,20 @@ interface InvoiceSummary extends Omit<InvoiceInput, 'total_volume' | 'readings'>
 }
 
 export interface InvoiceDetail extends InvoiceSummary {
+  adjusted_total_amount: string
   total_volume?: string
   common_volume?: string
   revision: number
   accounting_locked: boolean
   corrections: { revision: number; reason: string; corrected_by: string; corrected_at: string }[]
+  adjustments: ChargeAdjustment[]
   charges: {
+    id: string
     unit_id: string
     unit_number: string
     amount: string
+    adjusted_amount: string
+    adjustment_revision: number
     meter?: Omit<MeterReadingInput, 'unit_id' | 'rollover_confirmed'> & {
       consumption: string
       own_amount: string
@@ -73,6 +95,10 @@ export function createInvoice(buildingId: string, input: InvoiceInput) {
 
 export function correctInvoice(buildingId: string, invoiceId: string, input: CorrectionInput) {
   return writeProperty<InvoiceDetail>(`${endpoint(buildingId)}/${encodeURIComponent(invoiceId)}`, 'PUT', input)
+}
+
+export function adjustCharge(buildingId: string, invoiceId: string, chargeId: string, input: { request_id: string; revision: number; new_amount: string; reason: string }) {
+  return writeProperty<ChargeAdjustment>(`${endpoint(buildingId)}/${encodeURIComponent(invoiceId)}/charges/${encodeURIComponent(chargeId)}/adjustments`, 'POST', input)
 }
 
 export function readMeterDefaults(

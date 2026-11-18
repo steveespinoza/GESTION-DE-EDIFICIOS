@@ -136,3 +136,23 @@ Para reproducir el flujo:
 5. Registrar un pago sobre el saldo arrastrado. La constancia conserva el importe histórico y muestra el pendiente actual del cargo. La factura de origen sigue bloqueada para correcciones directas.
 
 La conciliación y la protección entre dos propietarios también se verifican en API. La migración `0012_automatic_credit_and_carry` se aplicó a la base de demostración en Neon el 17 de noviembre de 2026. `alembic check` confirmó la correspondencia del esquema con los modelos. La base quedó con 17 tablas. La comparación de huellas antes y después conservó los registros de siete tablas financieras y comprobó la fecha y el responsable de las aplicaciones anteriores. El recorrido de interfaz de esta entrega usó PostgreSQL aislado; queda por repetirlo con Neon y comprobar el despliegue en Vercel y Render. Los objetos de S3 no se modificaron.
+
+## Recorrido de ajustes auditados
+
+El 17 de noviembre de 2026 verifiqué los ajustes con PostgreSQL 17 aislado y datos ficticios. Las pruebas de API cubren aumentos, reducciones a cero, pagos parciales, reintentos, revisiones antiguas, edificios ajenos y consultas de dos propietarios. Un cargo pagado de S/ 100,00 corregido a S/ 80,00 conserva su pago y genera S/ 20,00 de crédito. Si hay otros cargos pendientes de la unidad, ese dinero se aplica automáticamente.
+
+La suite también comprueba reducciones y aumentos sucesivos sobre la misma aplicación, la conservación de lecturas y arrastres, y el rollback ante un fallo después de conciliar. Las pruebas concurrentes ejecutan dos ajustes iguales, dos revisiones en conflicto y un ajuste simultáneo a un pago. La prueba de migración conserva los valores de una aplicación existente al asignarle identidad y verifica la protección del descenso con historial de ajustes y liberaciones.
+
+Desde el navegador entré como SuperAdmin, abrí una factura de S/ 200,00 para dos unidades y ajusté el cargo pagado de la primera de S/ 100,00 a S/ 80,00, indicando el motivo. Guardé con teclado y comprobé el historial y el total vigente de S/ 180,00. Después registré S/ 95,00 como nuevo importe: la factura conservó S/ 200,00 originales, el total vigente pasó a S/ 195,00 y el foco llegó al aviso de confirmación.
+
+Como propietario de la primera unidad, consulté S/ 95,00 aplicados y S/ 5,00 de crédito disponible. El detalle conservó la aplicación inicial de S/ 100,00, su liberación de S/ 20,00 y una nueva aplicación automática de S/ 15,00. El historial mostró los dos ajustes con su motivo, fecha y responsable. El formulario a 390 píxeles conservó sus controles, el foco visible y el contenido sin desbordamiento horizontal.
+
+Para reproducir:
+
+1. Aplicar `alembic upgrade head` en una base de pruebas. Emitir S/ 100,00 para una unidad y registrar un pago exacto.
+2. Abrir la factura como SuperAdmin. Registrar S/ 80,00 y un motivo desde «Ajustar un cargo». Verificar S/ 20,00 de crédito y el cargo original de S/ 100,00.
+3. Registrar S/ 95,00 como nuevo importe. Verificar otra entrada de historial, una nueva aplicación de S/ 15,00 y S/ 5,00 de crédito.
+4. Entrar como propietario y consultar el estado de cuenta. Comprobar que otro propietario no accede a la unidad ni a sus ajustes.
+5. En dos sesiones administrativas, intentar ajustar la misma revisión. Una operación se confirma y la otra pide actualizar la ficha. Reintentar la misma solicitud conserva un solo ajuste.
+
+La suite completa pasó con 112 pruebas en PostgreSQL 17 aislado. Ruff, formato, TypeScript, compilación y `alembic check` fueron correctos. La migración 0013, los ajustes y sus liberaciones se verificaron localmente. Esta entrega no modificó Neon ni S3, ni ejecutó un despliegue o CI remoto.

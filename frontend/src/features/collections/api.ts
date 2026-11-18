@@ -1,4 +1,5 @@
 import { propertyRequest, writeProperty } from '../properties/api'
+import type { ChargeAdjustment } from '../billing/invoiceApi'
 
 export interface Period {
   billing_year: number
@@ -10,6 +11,8 @@ interface Charge extends Period {
   service: string
   coverage_end: string
   amount: string
+  original_amount: string
+  adjustment: string
   applied: string
   balance: string
   consumption: string | null
@@ -22,7 +25,7 @@ export interface Payment extends Period {
   credit: string
   reference: string | null
   applications: (Period & {
-    charge_id: string; service: string; amount: string
+    id: string; charge_id: string; service: string; amount: string; released: string; net_amount: string
     applied_at: string; applied_by: string | null; automatic: boolean
   })[]
 }
@@ -46,6 +49,7 @@ export interface Statement {
   charges: Charge[]
   payments: Payment[]
   carry_forwards: CarryForward[]
+  adjustments: ChargeAdjustment[]
 }
 
 export type PaymentValues = Pick<Payment, 'received_on' | 'amount' | 'reference'>

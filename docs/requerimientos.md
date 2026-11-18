@@ -24,7 +24,7 @@ Los identificadores se comparten con la [matriz de paridad](paridad.md). Los [ca
 | UNI-01 | Registrar unidades con un propietario nuevo o existente. Aplicar la capacidad del edificio y la unicidad del identificador por edificio. |
 | UNI-02 | Listar, buscar y consultar unidades con su propietario. Editar el área, el identificador y los datos del propietario. |
 | FAC-01 | Mantener un catálogo de servicios por edificio con reparto lineal o por consumo medido. |
-| FAC-02 | Registrar facturas con periodo, fechas, monto, volumen según el servicio, adjuntos y comprobante. Consultar el histórico y corregir facturas según su estado. |
+| FAC-02 | Registrar facturas con periodo, fechas, monto, volumen según el servicio, adjuntos y comprobante. Consultar el histórico, corregir facturas abiertas y registrar ajustes auditados por unidad en cargos con pagos o arrastres. |
 | FAC-03 | Precargar la lectura anterior pertinente, admitir tres decimales, tratar reinicios de medidor y generar cargos que cuadren con el total facturado. |
 | COB-01 | Reportar y revisar un comprobante de pago externo. Registrar o confirmar el pago con fecha y monto y mostrar su detalle en la cobranza del periodo. |
 | COB-02 | Aplicar pagos exactos, parciales y excedentes. Aplicar automáticamente el crédito a los cargos de la misma unidad. Conservar el origen de los saldos y arrastres y evitar efectos duplicados. |
@@ -50,4 +50,4 @@ Los identificadores se comparten con la [matriz de paridad](paridad.md). Los [ca
 
 Los pagos se realizan fuera de la aplicación. La versión de portafolio usa datos ficticios y un entorno propio. La migración de registros empresariales queda fuera de esta entrega.
 
-Queda por confirmar si existe un flujo que requiera un administrador restringido a un edificio o una cuenta de inquilino. También quedan por definir los ajustes de periodos liquidados y las columnas del Excel de transparencia. Los periodos sin facturas se omiten al registrar arrastres, conservando el periodo de origen.
+Queda por confirmar si existe un flujo que requiera un administrador restringido a un edificio o una cuenta de inquilino. Quedan por definir las columnas del Excel de transparencia. Los ajustes monetarios de cargos con movimientos conservan su origen y se registran por unidad. Los periodos sin facturas se omiten al registrar arrastres, conservando el periodo de origen.

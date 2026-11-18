@@ -76,6 +76,9 @@ erDiagram
     PAGO ||--o{ APLICACION_PAGO : distribuye
     CARGO ||--o{ APLICACION_PAGO : recibe
     CARGO ||--o{ ARRASTRE_SALDO : conserva
+    CARGO ||--o{ AJUSTE_CARGO : recibe
+    AJUSTE_CARGO ||--o{ LIBERACION_APLICACION : origina
+    APLICACION_PAGO ||--o{ LIBERACION_APLICACION : conserva
     UNIDAD ||--o{ RECIBO_VERSION : conserva
     EDIFICIO ||--o{ INCIDENCIA : recibe
     UNIDAD o|--o{ INCIDENCIA : ubica
@@ -90,3 +93,9 @@ Las relaciones muestran el diseño previsto. Cada servicio pertenece a un edific
 Facturación llama a la conciliación de cobranzas después de registrar los cargos y antes de confirmar la transacción. Cobranzas usa el mismo bloqueo del edificio al confirmar pagos y reportes. El crédito disponible se consume dentro de la unidad por orden de registro del pago y antigüedad del cargo. Las aplicaciones conservan fecha, responsable y uso automático.
 
 `balance_carry_forwards` registra una constancia por cargo y periodo posterior con actividad. El saldo total se calcula con cargos y aplicaciones; las constancias preservan el historial del arrastre. El primer arrastre bloquea la factura de origen. La [decisión financiera](decisiones/0001-creditos-y-arrastres.md) detalla el contrato y su recuperación.
+
+## Ajustes de cargos con movimientos
+
+`charge_adjustments` conserva cada diferencia monetaria por cargo, con revisión, solicitud, motivo y responsable. Las aplicaciones de pago tienen identidad propia y `payment_application_releases` referencia cada aplicación y el ajuste que liberó dinero. El crédito regresa al pago de origen y se aplica mediante la conciliación de la unidad. Factura, lecturas y aplicaciones originales conservan sus importes.
+
+Las consultas suman las diferencias de ajustes al cargo y restan las liberaciones de las aplicaciones. Los arrastres conservan su importe histórico. El caso de uso autoriza por edificio y confirma todos esos movimientos bajo el bloqueo del edificio. La [decisión de ajustes](decisiones/0002-ajustes-auditados-de-cargos.md) detalla las reglas y la migración.

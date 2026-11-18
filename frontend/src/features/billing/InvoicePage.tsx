@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 
 import { PropertyRequestError, readBuilding } from '../properties/api'
@@ -7,6 +7,8 @@ import { listServices } from './api'
 import { billingMonths, InvoiceForm } from './InvoiceForm'
 import { InvoiceAttachments } from './InvoiceAttachments'
 import { InvoiceCorrectionForm } from './InvoiceCorrectionForm'
+import { ChargeAdjustmentForm } from './ChargeAdjustmentForm'
+import { ChargeAdjustmentHistory } from './ChargeAdjustmentHistory'
 import { invoicePath, listInvoices, readInvoice, type InvoiceDetail } from './invoiceApi'
 
 const money = (amount: string) => `S/ ${amount.replace('.', ',')}`
@@ -74,7 +76,7 @@ function InvoiceHistory({ buildingId }: { buildingId: string }) {
   )
 }
 
-function InvoiceContents({ buildingId, initial, reload }: { buildingId: string; initial: InvoiceDetail; reload: () => void }) {
+function InvoiceContents({ buildingId, initial, reload, onAdjusted, onAdjustmentStarted }: { buildingId: string; initial: InvoiceDetail; reload: () => void; onAdjusted: () => void; onAdjustmentStarted: () => void }) {
   const [invoice, setInvoice] = useState(initial)
   return (
     <>
@@ -85,7 +87,8 @@ function InvoiceContents({ buildingId, initial, reload }: { buildingId: string; 
             <div><dt>Periodo contable</dt><dd>{period(invoice.billing_month, invoice.billing_year)}</dd></div>
             <div><dt>Fecha de inicio</dt><dd>{invoice.start_date}</dd></div>
             <div><dt>Fecha de fin</dt><dd>{invoice.end_date}</dd></div>
-            <div><dt>Monto total</dt><dd>{money(invoice.total_amount)}</dd></div>
+            <div><dt>Monto original del proveedor</dt><dd>{money(invoice.total_amount)}</dd></div>
+            {invoice.adjustments.length > 0 && <div><dt>Total vigente de cargos</dt><dd>{money(invoice.adjusted_total_amount)}</dd></div>}
             {invoice.total_volume !== undefined && (
               <div><dt>Volumen de la factura</dt><dd>{volume(invoice.total_volume)}</dd></div>
             )}
@@ -100,7 +103,8 @@ function InvoiceContents({ buildingId, initial, reload }: { buildingId: string; 
             {invoice.charges.map((charge) => (
               <div key={charge.unit_id}>
                 <dt>Unidad {charge.unit_number}</dt>
-                <dd>{money(charge.amount)}</dd>
+                <dd>Importe original {money(charge.amount)}</dd>
+                {charge.adjustment_revision > 0 && <dd>Importe vigente con ajustes {money(charge.adjusted_amount)}</dd>}
                 {charge.meter && (
                   <>
                     <dd>{volume(charge.meter.previous_reading)} → {volume(charge.meter.current_reading)}{charge.meter.rolled_over && ' · vuelta a cero'}</dd>
@@ -114,6 +118,8 @@ function InvoiceContents({ buildingId, initial, reload }: { buildingId: string; 
         </section>
       </div>
       <InvoiceCorrectionForm buildingId={buildingId} invoice={invoice} onSaved={setInvoice} onReload={reload} />
+      <ChargeAdjustmentForm buildingId={buildingId} invoice={invoice} onSaved={onAdjusted} onReload={reload} onStart={onAdjustmentStarted} />
+      <ChargeAdjustmentHistory adjustments={invoice.adjustments} />
       <InvoiceAttachments buildingId={buildingId} invoiceId={invoice.id} />
     </>
   )
@@ -122,14 +128,25 @@ function InvoiceContents({ buildingId, initial, reload }: { buildingId: string; 
 function InvoiceRecord({ buildingId, invoiceId }: { buildingId: string; invoiceId: string }) {
   const load = useCallback((signal: AbortSignal) => readInvoice(buildingId, invoiceId, signal), [buildingId, invoiceId])
   const { query, retry } = usePropertyQuery(load)
+  const [adjusted, setAdjusted] = useState(false)
+  const notice = useRef<HTMLParagraphElement>(null)
+  useEffect(() => {
+    if (adjusted && query.status === 'ready') notice.current?.focus()
+  }, [adjusted, query.status])
+
+  function onAdjusted() {
+    setAdjusted(true)
+    retry()
+  }
 
   return (
     <section className="building-page" aria-labelledby="invoice-title">
       <Link to={invoicePath(buildingId)}>Volver a facturas</Link>
       <h1 id="invoice-title">Detalle de factura</h1>
+      {adjusted && query.status === 'ready' && <p ref={notice} tabIndex={-1} role="status">Ajuste registrado. Los importes y el historial están actualizados.</p>}
       {query.status === 'loading' && <p role="status">Cargando factura…</p>}
       {query.status === 'error' && <LoadError error={query.error} retry={retry} />}
-      {query.status === 'ready' && <InvoiceContents buildingId={buildingId} initial={query.data} reload={retry} />}
+      {query.status === 'ready' && <InvoiceContents buildingId={buildingId} initial={query.data} reload={retry} onAdjusted={onAdjusted} onAdjustmentStarted={() => setAdjusted(false)} />}
     </section>
   )
 }
