@@ -36,3 +36,19 @@
 .unit-statement input[type="file"] {
   width: 100%;
 }
+
+.collections-filters {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  align-items: end;
+}
+
+.collections-filters .collections-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+}
+
+.collections-checkbox input {
+  width: auto;
+}

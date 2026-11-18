@@ -38,6 +38,7 @@ function BuildingRecord({ id, editing }: { id: string; editing: boolean }) {
           <Link to="servicios">Servicios</Link>
           <Link to="facturas">Facturas</Link>
           <Link to="reportes-de-pago">Reportes de pago</Link>
+          <Link to="cobranzas">Cobranzas</Link>
           <Link to="editar">Editar edificio</Link>
         </div>
       </div>

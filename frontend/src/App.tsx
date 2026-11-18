@@ -4,6 +4,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { ServiceCatalogPage } from './features/billing/ServiceCatalogPage'
 import { InvoicePage } from './features/billing/InvoicePage'
 import { StatementPage } from './features/collections/StatementPage'
+import { CollectionsPage } from './features/collections/CollectionsPage'
 import { PaymentReportsPage } from './features/collections/PaymentReportsPage'
 import { LoginForm } from './features/identity/LoginForm'
 import { getCurrentSession, type SessionUser } from './features/identity/api'
@@ -87,6 +88,7 @@ export function App() {
               <Route path="edificios/:buildingId/servicios" element={<ServiceCatalogPage />} />
               <Route path="edificios/:buildingId/facturas" element={<InvoicePage />} />
               <Route path="edificios/:buildingId/reportes-de-pago" element={<PaymentReportsPage />} />
+              <Route path="edificios/:buildingId/cobranzas" element={<CollectionsPage />} />
               <Route path="edificios/:buildingId/facturas/:invoiceId" element={<InvoicePage />} />
               <Route path="edificios/:buildingId/unidades" element={<UnitsList />} />
               <Route path="edificios/:buildingId/unidades/nueva" element={<NewUnitPage />} />

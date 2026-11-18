@@ -26,9 +26,11 @@ function StatementContent({ statement }: { statement: Statement }) {
         <h2 id="statement-summary">{statement.building_name} · Unidad {statement.unit_number}</h2>
         <dl className="building-details">
           <div><dt>Pendiente de todos los periodos</dt><dd>{money(statement.balance)}</dd></div>
+          <div><dt>De ese pendiente, vencido</dt><dd>{money(statement.overdue_balance)}</dd></div>
           <div><dt>Crédito de la unidad</dt><dd>{money(statement.credit)}</dd></div>
         </dl>
         <p>El crédito disponible se aplica automáticamente a los cargos pendientes más antiguos de esta unidad.</p>
+        <p>Vencimientos al {statement.as_of} (hora de Lima). Los importes vencen al terminar la fecha indicada.</p>
       </section>
       {periods.size > 0 && (
         <div className="building-form statement-period">
@@ -51,6 +53,7 @@ function StatementContent({ statement }: { statement: Statement }) {
                   <dd>Importe {money(charge.amount)} · Pendiente {money(charge.balance)}</dd>
                   {charge.adjustment !== '0.00' && <dd>Original {money(charge.original_amount)} · Ajustes {money(charge.adjustment)}</dd>}
                   <dd>Aplicado {money(charge.applied)} · Cobertura hasta {charge.coverage_end}</dd>
+                  <dd>Vencimiento: {charge.due_date ?? 'Sin vencimiento'}{charge.balance === '0.00' ? ' · Pagado' : charge.overdue ? ' · Vencido' : charge.due_date ? ' · Por vencer' : ''}</dd>
                   {charge.consumption !== null && <dd>Consumo propio {charge.consumption.replace('.', ',')} m³</dd>}
                 </div>
               ))}

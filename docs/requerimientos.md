@@ -26,7 +26,7 @@ Los identificadores se comparten con la [matriz de paridad](paridad.md). Los [ca
 | FAC-01 | Mantener un catálogo de servicios por edificio con reparto lineal o por consumo medido. |
 | FAC-02 | Registrar facturas con periodo, fechas, monto, volumen según el servicio, adjuntos y comprobante. Consultar el histórico, corregir facturas abiertas y registrar ajustes auditados por unidad en cargos con pagos o arrastres. |
 | FAC-03 | Precargar la lectura anterior pertinente, admitir tres decimales, tratar reinicios de medidor y generar cargos que cuadren con el total facturado. |
-| COB-01 | Reportar y revisar un comprobante de pago externo. Registrar o confirmar el pago con fecha y monto y mostrar su detalle en la cobranza del periodo. |
+| COB-01 | Reportar y revisar un comprobante de pago externo. Registrar o confirmar el pago con fecha y monto y mostrar su detalle en la cobranza del periodo. Registrar vencimientos por edificio y periodo con historial y filtrar deudas vencidas. |
 | COB-02 | Aplicar pagos exactos, parciales y excedentes. Aplicar automáticamente el crédito a los cargos de la misma unidad. Conservar el origen de los saldos y arrastres y evitar efectos duplicados. |
 | POR-01 | Mostrar las propiedades asociadas a la cuenta, sus pendientes, instrucciones de pago y estados de cuenta por unidad y periodo. |
 | DOC-01 | Emitir PDF por unidad y consolidado por edificio. Exportar Excel mensual, de transparencia y del histórico de cobranzas. |

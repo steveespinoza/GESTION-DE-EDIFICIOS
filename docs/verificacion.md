@@ -178,3 +178,28 @@ Para reproducir:
 5. Recorrer los enlaces con Tab y Enter, revisar móvil y consultar con una cuenta sin unidades. Comprobar el aviso de error y el reintento ante una interrupción de la API de pruebas.
 
 La [suite de propiedades](../backend/tests/test_owner_properties.py) verifica el alcance de dos propietarios, la conciliación con movimientos reales y una sola consulta para varias unidades. La suite completa pasó con **114 pruebas** mediante `pytest -q`, usando `TEST_DATABASE_URL` de PostgreSQL local aislado. `ruff check .`, `ruff format --check .`, `alembic check` y `npm run build` fueron correctos. No se requiere una migración nueva. La comprobación del entorno desplegado queda pendiente.
+
+## Recorrido de vencimientos y cobranzas
+
+El 17 de noviembre de 2026 comprobé la pantalla «Cobranzas» desde el edificio como SuperAdmin. La API, el frontend y PostgreSQL 17 fueron locales y aislados, con dos propietarios y datos ficticios. El edificio tenía S/ 300,00 pendientes entre agosto y octubre. Octubre vencía el mismo día de la consulta y aún mostraba «Por vencer». Agosto no tenía fecha y mostraba «Sin vencimiento».
+
+Registré el 16 de noviembre como fecha límite de agosto y guardé con Enter. El aviso de confirmación recibió el foco y el resumen pasó a S/ 200,00 vencidos. Una segunda pestaña que conservaba la revisión anterior recibió un conflicto al guardar otra fecha. Registré después el 15 de noviembre desde la revisión vigente y comprobé que el historial conservaba ambas fechas, sus motivos y su autor. El formulario mantuvo seleccionado el periodo guardado.
+
+«Solo deudas vencidas» mostró únicamente las dos unidades con S/ 100,00 pendientes en agosto. Al combinarlo con octubre, el listado quedó vacío; el resumen superior mantuvo sus totales rotulados para todos los periodos. También comprobé un edificio sin cargos y el aviso de error al detener la API sintética. Reiniciarla y pulsar «Volver a intentar» con teclado recuperó los datos.
+
+Como propietario consulté una unidad con S/ 150,00 pendientes y S/ 100,00 vencidos. El cargo de agosto conservó su fecha, aunque tenía una constancia de arrastre a octubre; el cargo de octubre seguía por vencer. El segundo propietario vio solo su unidad, con los mismos criterios. A 390 píxeles el formulario, los filtros y el historial no desbordaron horizontalmente; también revisé la vista de escritorio a 1280 píxeles y el foco visible en «Guardar vencimiento».
+
+![Cobranzas con filtro de deuda vencida y datos ficticios](imagenes/vencimientos-cobranzas.jpg)
+
+Para reproducir:
+
+1. Aplicar `alembic upgrade head` en una base aislada. Crear dos propietarios, unidades en dos edificios y facturas en dos periodos, con más de un servicio en uno de ellos.
+2. Abrir «Cobranzas» desde el edificio. Comprobar los importes pendientes y que los periodos anteriores no recibieron fechas automáticamente.
+3. Registrar una fecha anterior al día de Lima para un periodo, con un motivo. Asignar el día actual al otro. Solo el primer periodo debe contar como vencido.
+4. Combinar los filtros de periodo y deuda vencida. Abrir el estado de cuenta de una unidad y comparar el saldo vencido con su cobranza.
+5. Registrar pagos parciales y ajustar un cargo con movimientos. Comprobar que el vencido usa el saldo actual, sin duplicar arrastres ni restar el crédito dos veces.
+6. Guardar desde dos pestañas con la misma revisión. Una debe pedir actualizar; repetir una solicitud confirmada conserva un solo registro. Cambiar la fecha desde la revisión vigente conserva el historial.
+
+La suite completa pasó con **125 pruebas** en PostgreSQL 17 aislado mediante `pytest -q`. Ruff, formato, `alembic check`, TypeScript y compilación fueron correctos. La prueba de migración sube desde 0013 con factura, cargo, pago, aplicación y arrastre; compara siete tablas financieras, comprueba la ausencia de fechas inventadas y bloquea el descenso con historial. Las pruebas concurrentes verifican reintentos iguales y cambios en conflicto. La [decisión de vencimientos](decisiones/0003-vencimientos-por-periodo.md) describe la regla, los contratos y la recuperación.
+
+La migración `0014_collection_deadlines` se aplicó a Neon el 17 de noviembre de 2026 desde 0013. Las huellas anteriores y posteriores coincidieron en trece tablas financieras, incluidos cargos, lecturas, pagos, aplicaciones, ajustes, arrastres y metadatos de archivos. La base quedó con veinte tablas y ningún vencimiento creado automáticamente. `alembic check` no detectó diferencias entre el esquema y los modelos. El recorrido de interfaz descrito arriba fue local y aislado; quedan pendientes la comprobación de vencimientos con Neon y el despliegue conjunto de backend y frontend.

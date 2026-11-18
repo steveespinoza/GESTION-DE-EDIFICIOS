@@ -16,6 +16,8 @@ interface Charge extends Period {
   applied: string
   balance: string
   consumption: string | null
+  due_date: string | null
+  overdue: boolean
 }
 
 export interface Payment extends Period {
@@ -47,6 +49,8 @@ export interface Statement {
   balance: string
   credit: string
   charges: Charge[]
+  as_of: string
+  overdue_balance: string
   payments: Payment[]
   carry_forwards: CarryForward[]
   adjustments: ChargeAdjustment[]

@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.billing.adjustments import adjustment_history
 from app.billing.metering import from_milli
 from app.billing.models import ServiceCategory, ServiceInvoice, UnitCharge
+from app.collections import deadlines
 from app.collections.ledger import charge_rows, released_cents, settle_unit
 from app.collections.models import BalanceCarryForward, Payment, PaymentApplication
 from app.collections.schemas import (
@@ -168,6 +169,8 @@ def read_statement(
     if row is None:
         raise UnitNotFound
     building, unit = row
+    as_of = deadlines.business_today()
+    due_dates = deadlines.current_dates(deadlines.deadline_history(db, building.id))
     charges = [
         StatementCharge(
             id=charge.id,
@@ -181,6 +184,12 @@ def read_statement(
             applied=money(applied),
             balance=money(charge.amount_cents + adjustment - applied),
             consumption=from_milli(consumption) if consumption is not None else None,
+            due_date=due_dates.get((invoice.billing_year, invoice.billing_month)),
+            overdue=deadlines.is_overdue(
+                charge.amount_cents + adjustment - applied,
+                due_dates.get((invoice.billing_year, invoice.billing_month)),
+                as_of,
+            ),
         )
         for charge, invoice, service, applied, consumption, adjustment in charge_rows(
             db, unit.id
@@ -192,6 +201,10 @@ def read_statement(
         building_name=building.name,
         balance=sum((charge.balance for charge in charges), money(0)),
         credit=sum((payment.credit for payment in payments), money(0)),
+        as_of=as_of,
+        overdue_balance=sum(
+            (charge.balance for charge in charges if charge.overdue), money(0)
+        ),
         charges=charges,
         payments=payments,
         carry_forwards=carry_details(
