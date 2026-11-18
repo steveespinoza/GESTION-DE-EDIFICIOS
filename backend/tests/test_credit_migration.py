@@ -84,8 +84,35 @@ def test_upgrade_preserves_existing_payment_and_downgrade_protects_carries(
                 params,
             )
             original = db.execute(text("SELECT recorded_at FROM payments")).scalar_one()
+        command.upgrade(config, "0012_automatic_credit_and_carry")
+        with isolated.connect() as db:
+            previous_application = db.execute(
+                text(
+                    "SELECT payment_id, charge_id, amount_cents, applied_at, applied_by_id, automatic FROM payment_applications"
+                )
+            ).one()
         command.upgrade(config, "head")
         with isolated.connect() as db:
+            preserved = db.execute(
+                text(
+                    "SELECT payment_id, charge_id, amount_cents, applied_at, applied_by_id, automatic FROM payment_applications"
+                )
+            ).one()
+            assert preserved == previous_application
+            assert (
+                db.execute(text("SELECT id FROM payment_applications")).scalar_one()
+                is not None
+            )
+            # A previous backend can still insert an application without the new id.
+            savepoint = db.begin_nested()
+            generated = db.execute(
+                text(
+                    "INSERT INTO payment_applications (payment_id, charge_id, amount_cents) VALUES (:payment, :charge, 1) RETURNING id"
+                ),
+                params,
+            ).scalar_one()
+            assert generated is not None
+            savepoint.rollback()
             assert db.execute(
                 text("SELECT amount_cents, credit_cents FROM payments")
             ).one() == (12000, 2000)
@@ -119,6 +146,34 @@ def test_upgrade_preserves_existing_payment_and_downgrade_protects_carries(
                     text("SELECT amount_cents FROM balance_carry_forwards")
                 ).scalar_one()
                 == 1
+            )
+        adjustment = uuid4()
+        with isolated.begin() as db:
+            db.execute(
+                text(
+                    "INSERT INTO charge_adjustments (id, charge_id, request_id, revision, previous_cents, revised_cents, delta_cents, reason, recorded_by_id) VALUES (:adjustment, :charge, :request, 1, 10000, 9000, -1000, 'Corrección sintética', :actor)"
+                ),
+                {**params, "adjustment": adjustment},
+            )
+            db.execute(
+                text(
+                    "INSERT INTO payment_application_releases (application_id, adjustment_id, amount_cents) SELECT id, :adjustment, 1000 FROM payment_applications"
+                ),
+                {"adjustment": adjustment},
+            )
+            db.execute(text("UPDATE payments SET credit_cents = 3000"))
+        with pytest.raises(DBAPIError, match="Preserve charge adjustments"):
+            command.downgrade(config, "0012_automatic_credit_and_carry")
+        with isolated.connect() as db:
+            assert (
+                db.execute(text("SELECT count(*) FROM charge_adjustments")).scalar_one()
+                == 1
+            )
+            assert (
+                db.execute(
+                    text("SELECT amount_cents FROM payment_application_releases")
+                ).scalar_one()
+                == 1000
             )
     finally:
         isolated.dispose()

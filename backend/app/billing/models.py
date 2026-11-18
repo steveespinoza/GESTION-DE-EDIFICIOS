@@ -156,3 +156,37 @@ class MeterReading(Base):
     previous_milli: Mapped[int]
     current_milli: Mapped[int]
     consumption_milli: Mapped[int]
+
+
+class ChargeAdjustment(Base):
+    __tablename__ = "charge_adjustments"
+    __table_args__ = (
+        UniqueConstraint(
+            "charge_id", "request_id", name="uq_charge_adjustments_request"
+        ),
+        UniqueConstraint(
+            "charge_id", "revision", name="uq_charge_adjustments_revision"
+        ),
+        CheckConstraint("revision >= 1", name="ck_charge_adjustments_revision"),
+        CheckConstraint(
+            "previous_cents BETWEEN 0 AND 999999999999 AND revised_cents BETWEEN 0 AND 999999999999",
+            name="ck_charge_adjustments_amounts",
+        ),
+        CheckConstraint(
+            "delta_cents <> 0 AND previous_cents + delta_cents = revised_cents",
+            name="ck_charge_adjustments_delta",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    charge_id: Mapped[UUID] = mapped_column(ForeignKey("unit_charges.id"))
+    request_id: Mapped[UUID]
+    revision: Mapped[int]
+    previous_cents: Mapped[int] = mapped_column(BigInteger)
+    revised_cents: Mapped[int] = mapped_column(BigInteger)
+    delta_cents: Mapped[int] = mapped_column(BigInteger)
+    reason: Mapped[str] = mapped_column(String(500))
+    recorded_by_id: Mapped[UUID] = mapped_column(ForeignKey("accounts.id"))
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

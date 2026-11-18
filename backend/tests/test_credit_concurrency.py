@@ -8,14 +8,23 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.billing import invoices
+from app.billing.adjustment_schemas import ChargeAdjustmentInput
+from app.billing.adjustments import adjust_charge
+from app.billing.errors import InvoiceConflict
 from app.billing.invoice_schemas import LinearInvoiceInput
 from app.billing.models import (
     CalculationType,
+    ChargeAdjustment,
     ServiceCategory,
     ServiceInvoice,
     UnitCharge,
 )
-from app.collections.models import BalanceCarryForward, Payment, PaymentApplication
+from app.collections.models import (
+    BalanceCarryForward,
+    Payment,
+    PaymentApplication,
+    PaymentApplicationRelease,
+)
 from app.collections.schemas import PaymentInput
 from app.collections.service import read_statement, record_payment
 from app.identity.models import Account, RoleName
@@ -62,6 +71,17 @@ def committed_portfolio(engine, test_password_hash):
         with Session(engine) as db, db.begin():
             charges = select(UnitCharge.id).where(UnitCharge.unit_id == unit_id)
             payments = select(Payment.id).where(Payment.unit_id == unit_id)
+            applications = select(PaymentApplication.id).where(
+                PaymentApplication.payment_id.in_(payments)
+            )
+            db.execute(
+                delete(PaymentApplicationRelease).where(
+                    PaymentApplicationRelease.application_id.in_(applications)
+                )
+            )
+            db.execute(
+                delete(ChargeAdjustment).where(ChargeAdjustment.charge_id.in_(charges))
+            )
             db.execute(
                 delete(BalanceCarryForward).where(
                     BalanceCarryForward.charge_id.in_(charges)
@@ -213,3 +233,135 @@ def test_simultaneous_repeated_payment_has_one_financial_effect(
         assert [item.amount for item in result.payments[0].applications] == [
             Decimal("10.00")
         ]
+
+
+@pytest.mark.parametrize("same_request", [True, False])
+def test_concurrent_adjustments_preserve_one_revision(
+    engine, committed_portfolio, same_request
+):
+    building, actor, unit, categories = committed_portfolio
+    with Session(engine) as db:
+        invoice = invoices.create_invoice(
+            db, building, invoice_input(categories[0], amount="100.00"), actor
+        )
+        record_payment(
+            db,
+            building,
+            unit,
+            actor,
+            PaymentInput(
+                request_id=uuid4(),
+                billing_year=2027,
+                billing_month=1,
+                amount="100.00",
+                received_on="2027-01-10",
+            ),
+        )
+    request_id = uuid4()
+    barrier = Barrier(2)
+
+    def adjust(index):
+        with Session(engine) as db:
+            db.connection()
+            barrier.wait(timeout=10)
+            data = ChargeAdjustmentInput(
+                request_id=request_id if same_request else uuid4(),
+                revision=0,
+                new_amount="80.00" if same_request or index == 0 else "70.00",
+                reason="Corrección simultánea",
+            )
+            try:
+                return adjust_charge(
+                    db, building, invoice.id, invoice.charges[0].id, data, actor
+                )[1]
+            except InvoiceConflict:
+                return False
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        attempts = [executor.submit(adjust, index) for index in range(2)]
+        assert sorted(attempt.result(timeout=20) for attempt in attempts) == [
+            False,
+            True,
+        ]
+    with Session(engine) as db:
+        result = read_statement(db, unit, building_id=building)
+        assert len(result.adjustments) == 1 and result.adjustments[0].revision == 1
+        assert result.balance == 0
+        assert result.credit == Decimal("100.00") - result.adjustments[0].new_amount
+        assert sum(
+            item.net_amount for item in result.payments[0].applications
+        ) + result.credit == Decimal("100.00")
+
+
+def test_adjustment_racing_with_payment_reconciles_the_original_charge(
+    engine, committed_portfolio
+):
+    building, actor, unit, categories = committed_portfolio
+    with Session(engine) as db:
+        invoice = invoices.create_invoice(
+            db, building, invoice_input(categories[0], amount="100.00"), actor
+        )
+        record_payment(
+            db,
+            building,
+            unit,
+            actor,
+            PaymentInput(
+                request_id=uuid4(),
+                billing_year=2027,
+                billing_month=1,
+                amount="100.00",
+                received_on="2027-01-10",
+            ),
+        )
+    barrier = Barrier(2)
+
+    def run(operation):
+        with Session(engine) as db:
+            db.connection()
+            barrier.wait(timeout=10)
+            if operation == "adjust":
+                adjust_charge(
+                    db,
+                    building,
+                    invoice.id,
+                    invoice.charges[0].id,
+                    ChargeAdjustmentInput(
+                        request_id=uuid4(),
+                        revision=0,
+                        new_amount="120.00",
+                        reason="Aumento del cargo",
+                    ),
+                    actor,
+                )
+            else:
+                record_payment(
+                    db,
+                    building,
+                    unit,
+                    actor,
+                    PaymentInput(
+                        request_id=uuid4(),
+                        billing_year=2027,
+                        billing_month=1,
+                        amount="10.00",
+                        received_on="2027-01-11",
+                    ),
+                )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        attempts = [
+            executor.submit(run, operation) for operation in ("adjust", "payment")
+        ]
+        for attempt in attempts:
+            attempt.result(timeout=20)
+    with Session(engine) as db:
+        result = read_statement(db, unit, building_id=building)
+        assert result.balance == Decimal("10.00") and result.credit == 0
+        assert len(result.payments) == 2 and len(result.adjustments) == 1
+        assert sum(payment.amount for payment in result.payments) == Decimal("110.00")
+        assert sum(
+            item.net_amount
+            for payment in result.payments
+            for item in payment.applications
+        ) == Decimal("110.00")

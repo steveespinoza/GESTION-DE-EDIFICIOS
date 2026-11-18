@@ -6,9 +6,45 @@ from uuid import UUID
 from sqlalchemy import BigInteger, and_, cast, func, select
 from sqlalchemy.orm import Session
 
-from app.billing.models import MeterReading, ServiceCategory, ServiceInvoice, UnitCharge
-from app.collections.models import BalanceCarryForward, Payment, PaymentApplication
+from app.billing.models import (
+    ChargeAdjustment,
+    MeterReading,
+    ServiceCategory,
+    ServiceInvoice,
+    UnitCharge,
+)
+from app.collections.models import (
+    BalanceCarryForward,
+    Payment,
+    PaymentApplication,
+    PaymentApplicationRelease,
+)
 from app.properties.models import Unit
+
+
+def released_cents():
+    return (
+        select(
+            cast(
+                func.coalesce(func.sum(PaymentApplicationRelease.amount_cents), 0),
+                BigInteger,
+            )
+        )
+        .where(PaymentApplicationRelease.application_id == PaymentApplication.id)
+        .correlate(PaymentApplication)
+        .scalar_subquery()
+    )
+
+
+def adjustment_cents():
+    return (
+        select(
+            cast(func.coalesce(func.sum(ChargeAdjustment.delta_cents), 0), BigInteger)
+        )
+        .where(ChargeAdjustment.charge_id == UnitCharge.id)
+        .correlate(UnitCharge)
+        .scalar_subquery()
+    )
 
 
 def charge_rows(db: Session, unit_id: UUID):
@@ -21,13 +57,29 @@ def charge_rows(db: Session, unit_id: UUID):
         .where(PaymentApplication.charge_id == UnitCharge.id)
         .scalar_subquery()
     )
+    released = (
+        select(
+            cast(
+                func.coalesce(func.sum(PaymentApplicationRelease.amount_cents), 0),
+                BigInteger,
+            )
+        )
+        .join(
+            PaymentApplication,
+            PaymentApplication.id == PaymentApplicationRelease.application_id,
+        )
+        .where(PaymentApplication.charge_id == UnitCharge.id)
+        .correlate(UnitCharge)
+        .scalar_subquery()
+    )
     return db.execute(
         select(
             UnitCharge,
             ServiceInvoice,
             ServiceCategory.name,
-            applied,
+            applied - released,
             MeterReading.consumption_milli,
+            adjustment_cents(),
         )
         .join(ServiceInvoice, UnitCharge.invoice_id == ServiceInvoice.id)
         .join(ServiceCategory, ServiceInvoice.category_id == ServiceCategory.id)
@@ -59,7 +111,8 @@ def settle_unit(
     db.flush()
     rows = charge_rows(db, unit_id)
     balances = {
-        charge.id: charge.amount_cents - applied for charge, _, _, applied, _ in rows
+        charge.id: charge.amount_cents + adjustment - applied
+        for charge, _, _, applied, _, adjustment in rows
     }
     credits = db.scalars(
         select(Payment)
@@ -68,7 +121,7 @@ def settle_unit(
     ).all()
     now = datetime.now(UTC)
     for payment in credits:
-        for charge, invoice, _, _, _ in rows:
+        for charge, invoice, _, _, _, _ in rows:
             if payment.credit_cents == 0:
                 break
             amount = min(balances[charge.id], payment.credit_cents)
@@ -90,7 +143,10 @@ def settle_unit(
                 invoice.accounting_locked_at = now
 
     periods = sorted(
-        {(invoice.billing_year, invoice.billing_month) for _, invoice, _, _, _ in rows}
+        {
+            (invoice.billing_year, invoice.billing_month)
+            for _, invoice, _, _, _, _ in rows
+        }
     )
     existing = set(
         db.execute(
@@ -103,7 +159,7 @@ def settle_unit(
             .where(UnitCharge.unit_id == unit_id)
         ).all()
     )
-    for charge, invoice, _, _, _ in rows:
+    for charge, invoice, _, _, _, _ in rows:
         balance = balances[charge.id]
         if balance <= 0:
             continue

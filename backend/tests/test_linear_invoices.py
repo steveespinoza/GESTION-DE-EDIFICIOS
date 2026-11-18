@@ -94,7 +94,14 @@ def test_invoice_persists_exact_charges_and_unit_number_snapshot(
         for number, amount in (("001", "33.34"), ("002", "33.33"), ("003", "33.33"))
     ]
     assert invoice["total_amount"] == "100.00"
-    assert invoice["charges"] == charges
+    assert [
+        {key: row[key] for key in ("unit_id", "unit_number", "amount")}
+        for row in invoice["charges"]
+    ] == charges
+    assert all(
+        row["adjusted_amount"] == row["amount"] and row["adjustment_revision"] == 0
+        for row in invoice["charges"]
+    )
     assert sum(Decimal(charge["amount"]) for charge in invoice["charges"]) == Decimal(
         "100.00"
     )
@@ -105,6 +112,9 @@ def test_invoice_persists_exact_charges_and_unit_number_snapshot(
             select(UnitCharge).where(UnitCharge.invoice_id == persisted.id)
         ).all()
         assert sorted(charge.amount_cents for charge in saved) == [3333, 3333, 3334]
+        assert {UUID(row["id"]) for row in invoice["charges"]} == {
+            charge.id for charge in saved
+        }
 
     unit = units["001"]["id"]
     assert (
@@ -120,7 +130,15 @@ def test_invoice_persists_exact_charges_and_unit_number_snapshot(
         {
             key: value
             for key, value in invoice.items()
-            if key not in {"charges", "revision", "accounting_locked", "corrections"}
+            if key
+            not in {
+                "charges",
+                "revision",
+                "accounting_locked",
+                "corrections",
+                "adjustments",
+                "adjusted_total_amount",
+            }
         }
     ]
 

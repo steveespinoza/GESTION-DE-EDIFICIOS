@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.billing.adjustments import adjustment_history
 from app.billing.allocation import split_linear
 from app.billing.catalog import building_exists
 from app.billing.errors import InvoiceConflict, InvoiceNotFound
@@ -65,11 +66,14 @@ def invoice_detail(
     volume = invoice.total_volume_milli
     return InvoiceDetail(
         **summarize(invoice, category_name).model_dump(),
+        adjusted_total_amount=Decimal(invoice.total_cents).scaleb(-2),
         charges=[
             ChargeDetail(
+                id=charge.id,
                 unit_id=charge.unit_id,
                 unit_number=charge.unit_number,
                 amount=Decimal(charge.amount_cents).scaleb(-2),
+                adjusted_amount=Decimal(charge.amount_cents).scaleb(-2),
                 meter=meter_detail(charge, metering.get(charge.unit_id)),
             )
             for charge in charges
@@ -181,6 +185,18 @@ def find_invoice(db: Session, building_id: UUID, invoice_id: UUID) -> InvoiceDet
     charges, readings = invoice_records(db, invoice)
     detail = invoice_detail(invoice, category_name, charges, readings)
     detail.corrections = correction_history(db, invoice.id)
+    detail.adjustments = adjustment_history(db, invoice_id=invoice.id)
+    for charge in detail.charges:
+        changes = [
+            change for change in detail.adjustments if change.charge_id == charge.id
+        ]
+        if changes:
+            latest = max(changes, key=lambda change: change.revision)
+            charge.adjusted_amount = latest.new_amount
+            charge.adjustment_revision = latest.revision
+    detail.adjusted_total_amount = sum(
+        (charge.adjusted_amount for charge in detail.charges), Decimal("0.00")
+    )
     return detail
 
 

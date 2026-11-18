@@ -5,6 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
+from app.billing.adjustment_schemas import ChargeAdjustmentDetail
 from app.billing.invoice_schemas import AccountingPeriod
 
 
@@ -30,15 +31,20 @@ class StatementCharge(AccountingPeriod):
     service: str
     coverage_end: date
     amount: Decimal
+    original_amount: Decimal
+    adjustment: Decimal
     applied: Decimal
     balance: Decimal
     consumption: Decimal | None
 
 
 class AppliedCharge(AccountingPeriod):
+    id: UUID
     charge_id: UUID
     service: str
     amount: Decimal
+    released: Decimal
+    net_amount: Decimal
     applied_at: datetime
     applied_by: str | None
     automatic: bool
@@ -72,3 +78,4 @@ class Statement(BaseModel):
     charges: list[StatementCharge]
     payments: list[PaymentDetail]
     carry_forwards: list[CarryForwardDetail]
+    adjustments: list[ChargeAdjustmentDetail]

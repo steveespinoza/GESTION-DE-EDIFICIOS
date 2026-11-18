@@ -5,9 +5,10 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.billing.adjustments import adjustment_history
 from app.billing.metering import from_milli
 from app.billing.models import ServiceCategory, ServiceInvoice, UnitCharge
-from app.collections.ledger import charge_rows, settle_unit
+from app.collections.ledger import charge_rows, released_cents, settle_unit
 from app.collections.models import BalanceCarryForward, Payment, PaymentApplication
 from app.collections.schemas import (
     AppliedCharge,
@@ -53,6 +54,7 @@ def payment_details(
             ServiceInvoice,
             ServiceCategory.name,
             Account.username,
+            released_cents(),
         )
         .outerjoin(PaymentApplication, Payment.id == PaymentApplication.payment_id)
         .outerjoin(UnitCharge, UnitCharge.id == PaymentApplication.charge_id)
@@ -68,12 +70,14 @@ def payment_details(
             ServiceInvoice.billing_month,
             ServiceInvoice.end_date,
             ServiceInvoice.id,
+            PaymentApplication.applied_at,
+            PaymentApplication.id,
         )
     )
     if payment_id is not None:
         query = query.where(Payment.id == payment_id)
     details: dict[UUID, PaymentDetail] = {}
-    for payment, application, invoice, service, actor in db.execute(query):
+    for payment, application, invoice, service, actor, released in db.execute(query):
         if payment.id not in details:
             details[payment.id] = PaymentDetail(
                 id=payment.id,
@@ -87,9 +91,12 @@ def payment_details(
         if application is not None:
             details[payment.id].applications.append(
                 AppliedCharge(
+                    id=application.id,
                     charge_id=application.charge_id,
                     service=service,
                     amount=money(application.amount_cents),
+                    released=money(released),
+                    net_amount=money(application.amount_cents - released),
                     applied_at=application.applied_at.astimezone(UTC),
                     applied_by=actor,
                     automatic=application.automatic,
@@ -168,12 +175,16 @@ def read_statement(
             billing_month=invoice.billing_month,
             service=service,
             coverage_end=invoice.end_date,
-            amount=money(charge.amount_cents),
+            amount=money(charge.amount_cents + adjustment),
+            original_amount=money(charge.amount_cents),
+            adjustment=money(adjustment),
             applied=money(applied),
-            balance=money(charge.amount_cents - applied),
+            balance=money(charge.amount_cents + adjustment - applied),
             consumption=from_milli(consumption) if consumption is not None else None,
         )
-        for charge, invoice, service, applied, consumption in charge_rows(db, unit.id)
+        for charge, invoice, service, applied, consumption, adjustment in charge_rows(
+            db, unit.id
+        )
     ]
     payments = payment_details(db, unit.id)
     return Statement(
@@ -186,6 +197,7 @@ def read_statement(
         carry_forwards=carry_details(
             db, unit.id, {charge.id: charge.balance for charge in charges}
         ),
+        adjustments=adjustment_history(db, unit_id=unit.id),
     )
 
 

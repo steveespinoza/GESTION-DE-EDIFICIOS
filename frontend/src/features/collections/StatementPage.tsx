@@ -6,6 +6,7 @@ import { usePropertyQuery } from '../properties/usePropertyQuery'
 import { readStatement, type Payment, type Period, type Statement } from './api'
 import { PaymentForm } from './PaymentForm'
 import { OwnerReports } from './OwnerReports'
+import { ChargeAdjustmentHistory } from '../billing/ChargeAdjustmentHistory'
 import { money, periodLabel } from './format'
 import './collections.css'
 
@@ -17,6 +18,7 @@ function StatementContent({ statement }: { statement: Statement }) {
   const charges = statement.charges.filter((charge) => !selected || periodKey(charge) === selected)
   const payments = statement.payments.filter((payment) => !selected || periodKey(payment) === selected || payment.applications.some((application) => periodKey(application) === selected))
   const carries = statement.carry_forwards.filter((carry) => !selected || periodKey(carry) === selected)
+  const adjustments = statement.adjustments.filter((adjustment) => !selected || periodKey(adjustment) === selected)
 
   return (
     <>
@@ -47,6 +49,7 @@ function StatementContent({ statement }: { statement: Statement }) {
                 <div key={charge.id}>
                   <dt>{charge.service} · {periodLabel(charge)}</dt>
                   <dd>Importe {money(charge.amount)} · Pendiente {money(charge.balance)}</dd>
+                  {charge.adjustment !== '0.00' && <dd>Original {money(charge.original_amount)} · Ajustes {money(charge.adjustment)}</dd>}
                   <dd>Aplicado {money(charge.applied)} · Cobertura hasta {charge.coverage_end}</dd>
                   {charge.consumption !== null && <dd>Consumo propio {charge.consumption.replace('.', ',')} m³</dd>}
                 </div>
@@ -68,8 +71,9 @@ function StatementContent({ statement }: { statement: Statement }) {
                   {payment.applications.length > 0 && (
                     <ul>
                       {payment.applications.map((application) => (
-                        <li key={application.charge_id}>
-                          {application.service} · {periodLabel(application)} · {money(application.amount)}
+                        <li key={application.id}>
+                          {application.service} · {periodLabel(application)} · Aplicación vigente {money(application.net_amount)}
+                          {application.released !== '0.00' && <> · Aplicado inicialmente {money(application.amount)} · Liberado por ajustes {money(application.released)}</>}
                           {application.automatic && ' · Crédito aplicado automáticamente'}
                           {' · '}{application.applied_by ?? 'Sistema'} · <time dateTime={application.applied_at}>{new Date(application.applied_at).toLocaleString('es-PE')}</time>
                         </li>
@@ -97,6 +101,7 @@ function StatementContent({ statement }: { statement: Statement }) {
           </dl>
         )}
       </section>
+      <ChargeAdjustmentHistory adjustments={adjustments} />
     </>
   )
 }

@@ -1,9 +1,11 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from app.billing import corrections, invoices
+from app.billing.adjustment_schemas import ChargeAdjustmentDetail, ChargeAdjustmentInput
+from app.billing.adjustments import adjust_charge
 from app.billing.invoice_schemas import (
     AccountingPeriod,
     InvoiceDetail,
@@ -23,6 +25,33 @@ router = APIRouter(
     tags=["Facturas"],
     dependencies=[Depends(require_role(RoleName.SUPERADMIN))],
 )
+
+
+@router.post(
+    "/{invoice_id}/charges/{charge_id}/adjustments",
+    status_code=201,
+    dependencies=[Depends(require_session_header)],
+)
+def register_adjustment(
+    building_id: UUID,
+    invoice_id: UUID,
+    charge_id: UUID,
+    data: ChargeAdjustmentInput,
+    db: RequestSession,
+    user: CurrentUser,
+    response: Response,
+) -> ChargeAdjustmentDetail:
+    try:
+        result, created = adjust_charge(
+            db, building_id, invoice_id, charge_id, data, user.id
+        )
+    except invoices.InvoiceNotFound as error:
+        raise HTTPException(404, str(error)) from error
+    except invoices.InvoiceConflict as error:
+        raise HTTPException(409, str(error)) from error
+    if not created:
+        response.status_code = 200
+    return result
 
 
 @router.get("")
