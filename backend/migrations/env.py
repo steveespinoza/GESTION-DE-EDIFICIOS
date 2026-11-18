@@ -8,6 +8,7 @@ from app.billing import models as billing_models  # noqa: F401 -- Registers bill
 from app.collections import models as collection_models  # noqa: F401 -- Registers payment tables.
 from app.collections import report_models  # noqa: F401 -- Registers payment reports.
 from app.database import Base
+from app.documents import models as receipt_models  # noqa: F401 -- Registers issued receipts.
 from app.identity import models  # noqa: F401 -- Registers identity tables in Base.metadata.
 from app.properties import models as properties_models  # noqa: F401 -- Registers property tables.
 

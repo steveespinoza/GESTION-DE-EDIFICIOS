@@ -24,6 +24,7 @@ La API recibe las cargas, valida el alcance de cada operación y autoriza los en
 | Propiedades | Registrar edificios y unidades, asociar propietarios y administrar instrucciones de pago. |
 | Facturación | Gestionar servicios, facturas y lecturas. Aplicar el reparto lineal o medido y emitir los cargos. |
 | Cobranzas | Gestionar comprobantes, pagos confirmados, aplicaciones a cargos, créditos y arrastres. |
+| Documentos | Emitir recibos PDF individuales, conservar su copia financiera y sus versiones, y autorizar descargas. |
 | Reportes | Consultar estados de cuenta, consolidar datos y generar documentos a partir de importes registrados. |
 | Incidencias | Registrar fallas y gestionar su atención dentro de cada edificio. |
 | Mantenimiento | Gestionar equipos e intervenciones, y proyectar el calendario con la frecuencia de cada equipo. |

@@ -8,6 +8,7 @@ import { PaymentForm } from './PaymentForm'
 import { OwnerReports } from './OwnerReports'
 import { ChargeAdjustmentHistory } from '../billing/ChargeAdjustmentHistory'
 import { money, periodLabel } from './format'
+import { ReceiptsPanel } from './ReceiptsPanel'
 import './collections.css'
 
 const periodKey = (period: Period) => `${period.billing_year}-${String(period.billing_month).padStart(2, '0')}`
@@ -135,6 +136,7 @@ function UnitStatement({ unitId, buildingId }: { unitId: string; buildingId?: st
       {query.status === 'ready' && (
         <>
           <StatementContent statement={query.data} />
+          <ReceiptsPanel unitId={unitId} buildingId={buildingId} periods={query.data.charges} />
           {buildingId && <PaymentForm buildingId={buildingId} unitId={unitId} period={query.data.charges.at(-1)} onSaved={onSaved} />}
           {!buildingId && <OwnerReports unitId={unitId} period={query.data.charges.at(-1)} />}
         </>
