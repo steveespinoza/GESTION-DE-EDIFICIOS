@@ -78,4 +78,10 @@ La primera aplicación de un pago marca su factura dentro de la misma transacci�
 
 Las reducciones liberan exclusivamente el dinero aplicado que excede el nuevo importe. Esa liberación conserva la aplicación anterior y devuelve crédito a su pago de origen. Se liberan primero las aplicaciones más recientes. El crédito vuelve a cubrir automáticamente pendientes de la misma unidad. La suma de aplicaciones vigentes y crédito disponible reconcilia con cada pago recibido. Los aumentos consumen crédito disponible o incrementan el pendiente.
 
-La [decisión de ajustes auditados](decisiones/0002-ajustes-auditados-de-cargos.md) documenta el contrato y la recuperación de la migración. Quedan por definir las columnas del Excel de transparencia.
+La [decisión de ajustes auditados](decisiones/0002-ajustes-auditados-de-cargos.md) documenta el contrato y la recuperación de la migración.
+
+## Excel de transparencia
+
+Ambos roles descargan el Excel por unidad y periodo desde el estado de cuenta. Incluye resumen, cargos, reparto, pagos y ajustes. Los datos individuales corresponden a esa unidad; los agregados de la factura permiten comprobar el reparto del proveedor sin incluir registros de otros propietarios.
+
+Los importes reflejan los movimientos vigentes al descargar. El pendiente suma el periodo elegido y los saldos anteriores una sola vez. Los cargos posteriores quedan fuera de ese total; las aplicaciones posteriores aparecen en Pagos para conciliar lo recibido con el crédito actual. El archivo conserva los cargos originales y explica aparte sus ajustes y diferencias de redondeo. La [decisión del Excel](decisiones/0005-excel-de-transparencia.md) define columnas, permisos, fórmulas y operación.
