@@ -29,6 +29,16 @@ La verificación empieza con datos ficticios de dos edificios. Un propietario ti
 
 Las pruebas y sus resultados se enlazarán desde la [matriz de paridad](paridad.md) a medida que se implementen los requisitos.
 
+## Recorrido con Neon y S3
+
+El 17 de noviembre de 2026 comprobé el frontend y la API ejecutados localmente con PostgreSQL en Neon y archivos privados en Amazon S3. El recorrido usó datos ficticios de dos edificios, tres unidades y dos propietarios.
+
+Desde la interfaz registré el padrón, un servicio lineal y una factura de S/ 100,00 para dos unidades. Se guardaron y descargaron el documento del proveedor y su comprobante. La comparación del contenido confirmó que las descargas correspondían a los archivos cargados.
+
+El propietario envió un reporte de S/ 10,00 y otro de S/ 5,00. El primero recibió una copia legible del comprobante y se aprobó por el importe verificado de S/ 12,00. El segundo se rechazó con un motivo. El cargo de la primera unidad quedó con S/ 38,00 pendientes. El historial conservó el original y la copia, y se pudo descargar cada versión desde ambos roles.
+
+Una descarga sin firma respondió `403`. El segundo propietario recibió `404` al solicitar el estado de cuenta y la copia del comprobante de la unidad ajena. Su propia unidad conservó S/ 50,00 pendientes. El despliegue del frontend en Vercel y de la API en Render requiere una verificación posterior.
+
 ## Recorrido de identidad
 
 Completar el arranque descrito en el [README](../README.md#desarrollo-local) y usar las dos cuentas de prueba.
