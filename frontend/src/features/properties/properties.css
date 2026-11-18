@@ -101,6 +101,15 @@
   margin: 0.25rem 0 0;
 }
 
+.owner-unit-summary h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.owner-unit-summary .building-details {
+  margin-block: 1rem;
+}
+
 .building-form-page {
   max-width: 48rem;
 }

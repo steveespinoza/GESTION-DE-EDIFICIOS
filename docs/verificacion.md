@@ -156,3 +156,25 @@ Para reproducir:
 5. En dos sesiones administrativas, intentar ajustar la misma revisión. Una operación se confirma y la otra pide actualizar la ficha. Reintentar la misma solicitud conserva un solo ajuste.
 
 La suite completa pasó con 112 pruebas en PostgreSQL 17 aislado. Ruff, formato, TypeScript, compilación y `alembic check` fueron correctos. La migración 0013, los ajustes y sus liberaciones se verificaron localmente. Esta entrega no modificó Neon ni S3, ni ejecutó un despliegue o CI remoto.
+
+## Recorrido del resumen de saldos
+
+El 17 de noviembre de 2026 comprobé «Mis propiedades» con una API, un frontend y PostgreSQL 17 aislados. Cada unidad muestra el total pendiente de todos sus periodos, el crédito disponible y un enlace directo al estado de cuenta. Los importes se obtienen juntos en una sola consulta SQL, con el alcance del propietario autenticado. El contrato del listado añade `balance` y `credit` como cadenas decimales; la ficha individual conserva su contrato.
+
+El cálculo comparte las aplicaciones netas y los ajustes del estado de cuenta. Los arrastres son constancias del cargo de origen y no vuelven a sumarse. El crédito permanece separado del pendiente; las operaciones contables ya aplican automáticamente el dinero disponible.
+
+En el navegador consulté tres unidades de un propietario en dos edificios: una con S/ 5,00 de crédito tras un ajuste, otra con S/ 150,00 pendientes de diciembre y febrero, y una sin cargos con S/ 7,03 de crédito. Abrí el estado de cuenta con Enter y comprobé los mismos importes y el foco visible. El segundo propietario vio únicamente su unidad. Una cuenta sin unidades mostró el mensaje vacío y el SuperAdmin conservó su panel de edificios.
+
+A 390 píxeles las tarjetas se apilaron sin desbordamiento horizontal; también revisé la presentación a 1280 píxeles. Al detener la API de pruebas y volver al listado apareció el error de carga. Tras reiniciarla, «Volver a intentar» recuperó el resumen mediante teclado.
+
+![Resumen de saldos por propiedad con datos ficticios](imagenes/resumen-saldos-propiedades.jpg)
+
+Para reproducir:
+
+1. Crear dos edificios, un propietario con unidades en ambos y otro con una unidad en el edificio compartido.
+2. Emitir diciembre y febrero, omitiendo enero. Registrar pagos parciales y excedentes, y ajustar un cargo pagado hacia abajo y después hacia arriba.
+3. Consultar «Mis propiedades» con ambos propietarios. Comparar el pendiente y el crédito de cada tarjeta con su estado de cuenta, incluidos los céntimos y los arrastres.
+4. Crear una unidad sin cargos y registrar un pago. El resumen debe mostrar pendiente cero y el importe recibido como crédito.
+5. Recorrer los enlaces con Tab y Enter, revisar móvil y consultar con una cuenta sin unidades. Comprobar el aviso de error y el reintento ante una interrupción de la API de pruebas.
+
+La [suite de propiedades](../backend/tests/test_owner_properties.py) verifica el alcance de dos propietarios, la conciliación con movimientos reales y una sola consulta para varias unidades. La suite completa pasó con **114 pruebas** mediante `pytest -q`, usando `TEST_DATABASE_URL` de PostgreSQL local aislado. `ruff check .`, `ruff format --check .`, `alembic check` y `npm run build` fueron correctos. No se requiere una migración nueva. La comprobación del entorno desplegado queda pendiente.

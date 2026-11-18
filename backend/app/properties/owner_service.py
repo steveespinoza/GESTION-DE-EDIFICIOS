@@ -1,14 +1,16 @@
+from decimal import Decimal
 from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.collections.ledger import unit_balance_cents, unit_credit_cents
 from app.properties.models import Building, Unit
 from app.properties.owner_schemas import (
     OwnerBuilding,
     OwnerBuildingGroup,
-    OwnerUnit,
     OwnerUnitDetail,
+    OwnerUnitSummary,
     PaymentInstructions,
 )
 
@@ -22,16 +24,29 @@ def owned_units(owner_id: UUID):
 
 
 def list_properties(db: Session, owner_id: UUID) -> list[OwnerBuildingGroup]:
-    statement = owned_units(owner_id).order_by(
-        func.lower(Building.name), Building.id, func.lower(Unit.number), Unit.id
+    # One SQL snapshot includes both totals, even while a payment is being recorded.
+    statement = (
+        owned_units(owner_id)
+        .add_columns(unit_balance_cents(), unit_credit_cents())
+        .order_by(
+            func.lower(Building.name), Building.id, func.lower(Unit.number), Unit.id
+        )
     )
     groups: dict[UUID, OwnerBuildingGroup] = {}
-    for unit, building in db.execute(statement):
+    for unit, building, balance, credit in db.execute(statement):
         group = groups.get(building.id)
         if group is None:
             group = OwnerBuildingGroup.model_validate(building)
             groups[building.id] = group
-        group.units.append(OwnerUnit.model_validate(unit))
+        group.units.append(
+            OwnerUnitSummary(
+                id=unit.id,
+                number=unit.number,
+                area_sqm=unit.area_sqm,
+                balance=Decimal(balance).scaleb(-2),
+                credit=Decimal(credit).scaleb(-2),
+            )
+        )
     return list(groups.values())
 
 
