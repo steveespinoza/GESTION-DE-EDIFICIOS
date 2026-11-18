@@ -248,3 +248,25 @@ La suite completa pasó con **156 pruebas** en PostgreSQL 17 aislado mediante `p
 Para reproducir, crear una base aislada con `alembic upgrade head`, emitir cargos lineales y medidos, registrar pagos y ajustes y abrir el estado de cuenta de una unidad. Elegir un periodo en «Excel de transparencia», descargar y comparar Resumen, Cargos y Pagos con el estado de cuenta. Agregar una unidad después de emitir permite comprobar que Reparto conserva el divisor original.
 
 Esta entrega no modifica el esquema ni usa S3. La verificación corresponde al entorno local; quedan pendientes la apertura en Microsoft Excel de escritorio y el recorrido con el backend y frontend desplegados.
+
+## Recorrido del PDF consolidado mensual
+
+El SuperAdmin descarga el consolidado desde Cobranzas, eligiendo un periodo con cargos. La [decisión del consolidado](decisiones/0006-pdf-consolidado-mensual.md) define los importes, las unidades incluidas y la lectura consistente.
+
+![Descarga del consolidado con la lista de cobranzas filtrada](imagenes/pdf-consolidado-mensual.jpg)
+
+![Detalle por unidad del PDF con datos ficticios](imagenes/consolidado-mensual-pdf.png)
+
+Verificación local del 18 de noviembre de 2026:
+
+- El ejemplo de octubre tiene dos páginas A4 horizontales. La suma de sus tres unidades coincide con el pendiente de Cobranzas: 360.00, compuesto por 185.00 del mes y 175.00 anteriores. Sus servicios suman 240.00 de cargos y 55.00 aplicados al mes. El vencimiento del día de Lima todavía no se cuenta como vencido.
+- Rendericé e inspeccioné todas las páginas del ejemplo y de un documento de estrés de cuatro páginas con nombres largos, acentos, símbolos e importes altos. Las tablas repiten encabezados y los importes conservan los céntimos en una sola línea. La prueba de 35 unidades comprueba que ningún importe individual o total quede partido.
+- Descargué el PDF de octubre con Enter y comprobé su archivo, sus tres unidades y el pendiente de 360.00. La lista estaba filtrada por vencidos y vacía; el consolidado mantuvo todas las unidades. El aviso recibió foco.
+- Cambié a agosto. Una demora sintética deshabilitó selector y botón. El error de descarga recibió foco y el reintento devolvió 200 con aviso de éxito. El cambio de periodo conserva su alcance independiente de los filtros de la lista.
+- La vista de 390 × 844 no presentó desbordamiento horizontal. Un segundo edificio sin cargos mostró el mensaje de vacío y no ofreció descarga. El propietario fue redirigido a su portal al intentar abrir la ruta administrativa; la API denegó el consolidado a dos propietarios, incluso en sus edificios.
+
+La suite completa pasó con **173 pruebas** en PostgreSQL 17 aislado, incluidas diecisiete del consolidado. Ruff, formato, `alembic check` y `npm run build` fueron correctos. Las pruebas comparan estados de cuenta, servicios, ajustes, liberaciones, crédito y vencimientos, y comprueban que un pago concurrente espere a terminar la lectura.
+
+Para reproducir, emitir facturas en dos periodos de una base aislada, registrar pagos y ajustes y abrir Cobranzas. Elegir un periodo del consolidado, descargar y contrastar servicios y unidades con sus estados de cuenta. Repetir con un filtro de la lista activo y con otro edificio sin cargos.
+
+La entrega no requiere migración, nuevas dependencias ni S3. Queda pendiente verificar el flujo en el entorno desplegado. No se aplicaron cambios en Neon ni en permisos de almacenamiento durante esta verificación.

@@ -85,3 +85,9 @@ La [decisión de ajustes auditados](decisiones/0002-ajustes-auditados-de-cargos.
 Ambos roles descargan el Excel por unidad y periodo desde el estado de cuenta. Incluye resumen, cargos, reparto, pagos y ajustes. Los datos individuales corresponden a esa unidad; los agregados de la factura permiten comprobar el reparto del proveedor sin incluir registros de otros propietarios.
 
 Los importes reflejan los movimientos vigentes al descargar. El pendiente suma el periodo elegido y los saldos anteriores una sola vez. Los cargos posteriores quedan fuera de ese total; las aplicaciones posteriores aparecen en Pagos para conciliar lo recibido con el crédito actual. El archivo conserva los cargos originales y explica aparte sus ajustes y diferencias de redondeo. La [decisión del Excel](decisiones/0005-excel-de-transparencia.md) define columnas, permisos, fórmulas y operación.
+
+## PDF consolidado mensual
+
+Desde Cobranzas, el SuperAdmin descarga el reporte de un edificio y periodo con cargos. Incluye las facturas del proveedor y los importes vigentes por servicio, además de cargos, aplicaciones netas, saldos anteriores, pendiente, vencido y crédito por unidad. El selector del PDF define su periodo; los filtros de la lista de cobranzas no reducen el documento.
+
+El consolidado refleja movimientos vigentes al descargar, con el mismo alcance temporal del Excel por unidad. El crédito se muestra separado y los arrastres no duplican la deuda. Las unidades sin cargos del mes también aparecen. La [decisión del consolidado](decisiones/0006-pdf-consolidado-mensual.md) define cálculos, acceso administrativo y consistencia. La descarga es directa y no utiliza S3 ni crea una versión de recibo.

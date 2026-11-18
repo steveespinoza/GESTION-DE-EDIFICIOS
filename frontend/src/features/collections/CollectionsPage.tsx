@@ -6,6 +6,7 @@ import { usePropertyQuery } from '../properties/usePropertyQuery'
 import type { Period } from './api'
 import { readCollections, type CollectionOverview, type Deadline } from './deadlineApi'
 import { DeadlineForm } from './DeadlineForm'
+import { ConsolidationPanel } from './ConsolidationPanel'
 import { money, periodLabel } from './format'
 import './collections.css'
 
@@ -31,6 +32,7 @@ function CollectionsContent({ buildingId, data, onSaved, refresh, saved }: { bui
         <p>Vencimientos al {data.as_of} (hora de Lima). El importe pasa a vencido al día siguiente de la fecha límite.</p>
         <p>Los arrastres conservan la fecha del cargo de origen. Los periodos sin fecha se muestran como «Sin vencimiento».</p>
       </section>
+      <ConsolidationPanel buildingId={buildingId} periods={data.rows} />
       <div className="building-form collections-filters">
         <label>Filtrar por periodo<select value={selected} onChange={(event) => setSelected(event.target.value)}>
           <option value="">Todos los periodos</option>
