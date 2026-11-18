@@ -203,3 +203,28 @@ Para reproducir:
 La suite completa pasó con **125 pruebas** en PostgreSQL 17 aislado mediante `pytest -q`. Ruff, formato, `alembic check`, TypeScript y compilación fueron correctos. La prueba de migración sube desde 0013 con factura, cargo, pago, aplicación y arrastre; compara siete tablas financieras, comprueba la ausencia de fechas inventadas y bloquea el descenso con historial. Las pruebas concurrentes verifican reintentos iguales y cambios en conflicto. La [decisión de vencimientos](decisiones/0003-vencimientos-por-periodo.md) describe la regla, los contratos y la recuperación.
 
 La migración `0014_collection_deadlines` se aplicó a Neon el 17 de noviembre de 2026 desde 0013. Las huellas anteriores y posteriores coincidieron en trece tablas financieras, incluidos cargos, lecturas, pagos, aplicaciones, ajustes, arrastres y metadatos de archivos. La base quedó con veinte tablas y ningún vencimiento creado automáticamente. `alembic check` no detectó diferencias entre el esquema y los modelos. El recorrido de interfaz descrito arriba fue local y aislado; quedan pendientes la comprobación de vencimientos con Neon y el despliegue conjunto de backend y frontend.
+
+## Recorrido de recibos PDF individuales
+
+El 18 de noviembre de 2026 verifiqué la emisión desde el estado de cuenta de una unidad como SuperAdmin. La API, el frontend, PostgreSQL 17 y el almacenamiento de archivos fueron aislados, con datos ficticios. El recibo de octubre incluyó S/ 88,33 de cargos del mes, S/ 75,00 anteriores pendientes y S/ 163,33 totales. El detalle de agua mostró las lecturas 10,000 y 12,500 m³, el consumo propio de 2,500 m³ y su componente común original. Un abono recibido de S/ 25,00 apareció aplicado a los cargos anteriores.
+
+Guardé con Enter y el foco llegó a la confirmación. Emití una segunda versión con otro motivo y comprobé que ambas seguían disponibles. Un fallo sintético al guardar otro periodo mostró el error de almacenamiento; el reintento con los mismos datos produjo una sola primera versión. A 390 píxeles se conservaron enlaces, campos y foco visible sin desbordamiento horizontal.
+
+Como propietario consulté las dos versiones de su unidad. La descarga del administrador y la del propietario validaron el acceso, redirigieron al archivo y obtuvieron respuesta `200` del almacenamiento de prueba. El segundo propietario vio el historial vacío de su propia unidad. Las pruebas de API comprueban además que no puede listar ni descargar los recibos de la otra cuenta o combinar un recibo con otra unidad o edificio.
+
+Rendericé el PDF emitido con Poppler y revisé sus dos páginas: cabecera, importe destacado, cargos, saldos anteriores, pagos, instrucciones, versión y numeración. La huella del archivo coincidió con el registro persistido. Un caso adicional de cuatro páginas verificó nombres largos, acentos, importes altos, repetición de cabeceras y saltos de página sin solapamientos.
+
+![Primera página de un recibo individual con datos ficticios](imagenes/recibo-pdf-individual.png)
+
+Para reproducir:
+
+1. Aplicar `alembic upgrade head` a una base aislada y configurar un almacenamiento privado de prueba. Crear dos propietarios con unidades en edificios distintos.
+2. Emitir cargos de dos periodos y dos servicios, incluyendo consumo medido. Registrar un abono parcial y un vencimiento del periodo actual.
+3. Abrir el estado de cuenta como SuperAdmin, seleccionar el periodo en «Recibos PDF» y emitir con un motivo. Descargar el archivo y contrastar sus saldos con los cargos de ese periodo y los anteriores, excluyendo periodos posteriores.
+4. Cambiar un pago, el vencimiento o las instrucciones del edificio. Emitir otra versión desde la revisión vigente. La primera copia y su PDF deben conservarse.
+5. Consultar y descargar como propietario. Probar otra cuenta, otra unidad y otro edificio. Intentar emitir como Propietario debe ser rechazado.
+6. Repetir una solicitud y simular un fallo al guardar el archivo. Comprobar una sola versión confirmada y recuperación por reintento. Dos solicitudes simultáneas iguales deben compartir la versión; dos revisiones en conflicto deben confirmar solo una.
+
+La suite completa pasó con **136 pruebas** en PostgreSQL 17 aislado. Ruff, formato, `alembic check`, TypeScript y compilación fueron correctos. La prueba de migración sube desde 0014 con cargos, pagos, aplicaciones y vencimientos, conserva sus datos y protege el descenso con recibos existentes. Las pruebas de PDF contrastan contenido, importes, fechas, versiones, texto con caracteres especiales y generación simultánea de documentos. La [decisión de recibos](decisiones/0004-recibos-pdf-versionados.md) detalla los contratos y la recuperación.
+
+El 18 de noviembre de 2026 apliqué `0015_versioned_receipts` a Neon desde 0014. Las huellas anteriores y posteriores coincidieron en catorce tablas financieras, incluidos los vencimientos. La base quedó con veintiuna tablas, sin recibos creados automáticamente, y `alembic check` no detectó diferencias. La prueba de escritura de un PDF ficticio en `receipts/` del bucket real recibió `AccessDenied`; tampoco hay acceso a IAM con las credenciales del backend. Falta autorizar `s3:GetObject` y `s3:PutObject` para ese prefijo antes de repetir la validación con S3 y desplegar el flujo. El recorrido funcional descrito arriba usó almacenamiento aislado.

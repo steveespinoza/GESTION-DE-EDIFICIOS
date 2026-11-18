@@ -6,6 +6,8 @@ Los comprobantes de pago que envía un propietario se guardan bajo `payment-proo
 
 Los reemplazos administrativos usan ese mismo prefijo y una clave distinta para cada solicitud. Cada copia conserva su entrada en PostgreSQL y el archivo de origen. El historial permite descargar cada versión con los mismos permisos del reporte. La descarga `/proof` sin parámetro sigue abriendo el original. El historial agrega el parámetro `revision` para seleccionar una copia.
 
+Los recibos PDF emitidos se guardan bajo `receipts/`, con una clave distinta para cada versión. El SuperAdmin emite desde el estado de cuenta; el propietario y el administrador descargan las versiones de las unidades autorizadas. PostgreSQL conserva una copia financiera y la huella del archivo. Un recibo emitido se descarga como se guardó, aunque después cambien pagos o vencimientos.
+
 La API verifica la sesión y el alcance del archivo antes de generar una URL de cinco minutos. Mientras esté vigente, quien tenga el enlace puede usarlo. El navegador descarga el archivo como adjunto. [URLs firmadas de S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html)
 
 ## Configurar el bucket
@@ -22,7 +24,8 @@ La API verifica la sesión y el alcance del archivo antes de generar una URL de 
       "Action": ["s3:GetObject", "s3:PutObject"],
       "Resource": [
         "arn:aws:s3:::TU_BUCKET/invoice-files/*",
-        "arn:aws:s3:::TU_BUCKET/payment-proofs/*"
+        "arn:aws:s3:::TU_BUCKET/payment-proofs/*",
+        "arn:aws:s3:::TU_BUCKET/receipts/*"
       ]
     }
   ]
@@ -39,6 +42,8 @@ Aplica `alembic upgrade head` y reinicia la API para cargar la configuración. E
 
 Con una cuenta de propietario de prueba, envía un reporte con comprobante desde el estado de cuenta. Abre la bandeja «Reportes de pago» del edificio como SuperAdmin y descarga el archivo antes de decidir sobre el reporte.
 
+Para recibos, comprueba que el principal del backend tenga lectura y escritura en `receipts/`. Emite un periodo con cargos desde «Recibos PDF», descarga como administrador y repite como propietario de esa unidad. La migración `0015_versioned_receipts` debe estar aplicada antes de habilitar este flujo. La validación funcional de recibos usa un adaptador aislado. El 18 de noviembre de 2026, la escritura de prueba en receipts/ del bucket real recibió AccessDenied. Falta autorizar s3:GetObject y s3:PutObject para ese prefijo en la política del principal del backend y repetir la prueba antes del despliegue.
+
 ## Reintentos y recuperación
 
 Cada archivo se confirma por separado. Reenviar el mismo contenido y tipo para una factura reutiliza la entrada y la clave. Si el almacenamiento acepta el archivo pero la operación queda sin confirmar, la ficha solo muestra metadatos confirmados y el reintento idempotente utiliza la misma clave.
@@ -46,3 +51,5 @@ Cada archivo se confirma por separado. Reenviar el mismo contenido y tipo para u
 La migración protege los metadatos existentes al revertir. Antes de bajar de revisión con adjuntos registrados, conserva una copia de los metadatos y objetos para migrarlos juntos.
 
 La revisión `0011_add_report_proof_versions` asigna la versión cero a los reportes existentes. La reversión de esa revisión se detiene cuando hay reemplazos registrados para proteger los archivos y su historial.
+
+La revisión `0015_versioned_receipts` también bloquea el descenso cuando hay recibos emitidos. Para revertir la aplicación se conservan tabla y objetos. Si falla el guardado del PDF, no queda una versión confirmada y se puede reintentar con la misma solicitud. Una carga que termine antes de un fallo al confirmar la base puede dejar un objeto privado sin referencia; la API solo expone versiones confirmadas.

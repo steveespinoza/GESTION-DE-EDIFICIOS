@@ -14,6 +14,7 @@ from app.billing.router import router as billing_router
 from app.collections.report_router import router as payment_reports_router
 from app.collections.router import router as collections_router
 from app.database import configured_engine
+from app.documents.router import router as receipts_router
 from app.identity.router import router as identity_router
 from app.properties.owner_router import router as owner_properties_router
 from app.properties.router import router as properties_router
@@ -42,6 +43,7 @@ app.include_router(invoice_router)
 app.include_router(attachment_router)
 app.include_router(collections_router)
 app.include_router(payment_reports_router)
+app.include_router(receipts_router)
 
 
 @app.exception_handler(PropertyConflict)

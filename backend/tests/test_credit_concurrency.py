@@ -30,6 +30,9 @@ from app.collections.models import (
 )
 from app.collections.schemas import PaymentInput
 from app.collections.service import read_statement, record_payment
+from app.documents.models import Receipt
+from app.documents.schemas import ReceiptInput
+from app.documents.service import ReceiptConflict, issue_receipt
 from app.identity.models import Account, RoleName
 from app.properties.models import Building, Unit
 
@@ -103,6 +106,7 @@ def committed_portfolio(engine, test_password_hash):
             db.execute(
                 delete(ServiceCategory).where(ServiceCategory.id.in_(categories))
             )
+            db.execute(delete(Receipt).where(Receipt.unit_id == unit_id))
             db.execute(delete(Unit).where(Unit.id == unit_id))
             db.execute(
                 delete(CollectionDeadline).where(
@@ -415,3 +419,58 @@ def test_simultaneous_deadlines_preserve_one_revision(
             select(CollectionDeadline).where(CollectionDeadline.building_id == building)
         ).all()
         assert len(entries) == 1 and entries[0].revision == 1
+
+
+@pytest.mark.parametrize("same_request", [True, False])
+def test_simultaneous_receipt_issuance_preserves_one_version(
+    engine, committed_portfolio, same_request
+):
+    building, actor, unit, categories = committed_portfolio
+    with Session(engine) as db:
+        invoices.create_invoice(db, building, invoice_input(categories[0]), actor)
+    request = ReceiptInput(
+        request_id=uuid4(),
+        billing_year=2027,
+        billing_month=1,
+        revision=0,
+        reason="Emisión concurrente",
+    )
+    second = (
+        request if same_request else request.model_copy(update={"request_id": uuid4()})
+    )
+    barrier = Barrier(2)
+
+    class Files:
+        def __init__(self):
+            self.keys = []
+
+        def put(self, key, body, content_type):
+            self.keys.append(key)
+
+    files = Files()
+
+    def run(data):
+        with Session(engine) as db:
+            db.connection()
+            barrier.wait(timeout=10)
+            try:
+                result, created = issue_receipt(
+                    db, building, unit, actor, data, lambda: files
+                )
+                return str(result.id), created
+            except ReceiptConflict:
+                db.rollback()
+                return "conflict", False
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        attempts = [executor.submit(run, item) for item in (request, second)]
+        results = [attempt.result(timeout=20) for attempt in attempts]
+    assert sum(created for _, created in results) == 1
+    assert len(files.keys) == 1
+    if same_request:
+        assert results[0][0] == results[1][0]
+    else:
+        assert sum(identifier == "conflict" for identifier, _ in results) == 1
+    with Session(engine) as db:
+        records = db.scalars(select(Receipt).where(Receipt.unit_id == unit)).all()
+        assert len(records) == 1 and records[0].version == 1

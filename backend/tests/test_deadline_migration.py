@@ -68,12 +68,12 @@ def test_deadline_migration_preserves_ledger_and_protects_history(engine, monkey
             ):
                 db.execute(text(statement), identifiers)
             before = ledger_snapshot(db)
-        command.upgrade(config, "head")
+        command.upgrade(config, "0014_collection_deadlines")
         with isolated.connect() as db:
             assert ledger_snapshot(db) == before
             assert db.scalar(text("SELECT count(*) FROM collection_deadlines")) == 0
         command.downgrade(config, "0013_audited_charge_adjustments")
-        command.upgrade(config, "head")
+        command.upgrade(config, "0014_collection_deadlines")
         with isolated.begin() as db:
             db.execute(
                 text(
