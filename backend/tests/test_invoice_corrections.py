@@ -151,40 +151,43 @@ def test_metered_correction_enforces_continuity_and_recalculates(
         previous=("10", "5", "0"),
         current=("12", "10", "4"),
     )
+    # A carry freezes the original charges as well as a payment does.
+    blocked = admin.put(path, json=correction(original), headers=session_header)
+    assert (
+        blocked.status_code == 409 and "requiere un ajuste" in blocked.json()["detail"]
+    )
     readings = [
         {
             "unit_id": row["unit_id"],
             "previous_reading": row["meter"]["previous_reading"],
             "current_reading": row["meter"]["current_reading"],
         }
-        for row in original["charges"]
+        for row in following["charges"]
     ]
-    changed = [{**readings[0], "current_reading": "11"}, *readings[1:]]
+    changed = [{**readings[0], "previous_reading": "11"}, *readings[1:]]
     for volume, inputs, detail in (
-        ("20", changed, "siguiente factura"),
-        ("14.999", readings, "supera el volumen"),
+        ("20", changed, "lectura anterior"),
+        ("10.999", readings, "supera el volumen"),
     ):
         invalid = correction(
-            original, total_amount="100.01", total_volume=volume, readings=inputs
+            following, total_amount="100.01", total_volume=volume, readings=inputs
         )
-        result = admin.put(path, json=invalid, headers=session_header)
+        result = admin.put(following_path, json=invalid, headers=session_header)
         assert result.status_code == 409 and detail in result.json()["detail"]
-    assert admin.get(path).json() == original
-
-    revised = [{**readings[0], "previous_reading": "1"}, *readings[1:]]
+    assert admin.get(following_path).json() == following
     request = correction(
-        original, total_amount="100.01", total_volume="20", readings=revised
+        following, total_amount="100.01", total_volume="20", readings=readings
     )
-    result = admin.put(path, json=request, headers=session_header)
+    result = admin.put(following_path, json=request, headers=session_header)
     assert result.status_code == 200, result.text
     updated = result.json()
     assert updated["total_volume"] == "20.000"
-    assert updated["common_volume"] == "6.000"
-    assert updated["charges"][0]["meter"]["consumption"] == "9.000"
+    assert updated["common_volume"] == "9.000"
+    assert updated["charges"][0]["meter"]["consumption"] == "2.000"
     assert sum(Decimal(row["amount"]) for row in updated["charges"]) == Decimal(
         "100.01"
     )
-    assert admin.get(following_path).json() == following
+    assert admin.get(path).json() == {**original, "accounting_locked": True}
 
 
 def test_correction_respects_accounting_lock_and_authorization(

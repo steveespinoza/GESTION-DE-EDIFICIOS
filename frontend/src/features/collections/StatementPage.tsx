@@ -13,9 +13,10 @@ const periodKey = (period: Period) => `${period.billing_year}-${String(period.bi
 
 function StatementContent({ statement }: { statement: Statement }) {
   const [selected, setSelected] = useState('')
-  const periods = new Map([...statement.charges, ...statement.payments].map((item) => [periodKey(item), item]))
+  const periods = new Map([...statement.charges, ...statement.payments, ...statement.carry_forwards].map((item) => [periodKey(item), item]))
   const charges = statement.charges.filter((charge) => !selected || periodKey(charge) === selected)
-  const payments = statement.payments.filter((payment) => !selected || periodKey(payment) === selected)
+  const payments = statement.payments.filter((payment) => !selected || periodKey(payment) === selected || payment.applications.some((application) => periodKey(application) === selected))
+  const carries = statement.carry_forwards.filter((carry) => !selected || periodKey(carry) === selected)
 
   return (
     <>
@@ -25,6 +26,7 @@ function StatementContent({ statement }: { statement: Statement }) {
           <div><dt>Pendiente de todos los periodos</dt><dd>{money(statement.balance)}</dd></div>
           <div><dt>Crédito de la unidad</dt><dd>{money(statement.credit)}</dd></div>
         </dl>
+        <p>El crédito disponible se aplica automáticamente a los cargos pendientes más antiguos de esta unidad.</p>
       </section>
       {periods.size > 0 && (
         <div className="building-form statement-period">
@@ -54,18 +56,23 @@ function StatementContent({ statement }: { statement: Statement }) {
         </section>
         <section className="building-surface" aria-labelledby="statement-payments">
           <h2 id="statement-payments">Pagos registrados</h2>
+          {selected && <p>Incluye pagos del periodo y pagos anteriores aplicados a sus cargos.</p>}
           {payments.length === 0 ? <p>No hay pagos en el periodo seleccionado.</p> : (
             <div className="building-details">
               {payments.map((payment) => (
                 <details key={payment.id}>
                   <summary>{payment.received_on} · {money(payment.amount)}</summary>
-                  <p>Aplicación hasta {periodLabel(payment)}</p>
+                  <p>Periodo de referencia {periodLabel(payment)}</p>
                   {payment.reference && <p>Referencia {payment.reference}</p>}
-                  {payment.credit !== '0.00' && <p>Crédito generado {money(payment.credit)}</p>}
+                  {payment.credit !== '0.00' && <p>Crédito disponible {money(payment.credit)}</p>}
                   {payment.applications.length > 0 && (
                     <ul>
                       {payment.applications.map((application) => (
-                        <li key={application.charge_id}>{application.service} · {periodLabel(application)} · {money(application.amount)}</li>
+                        <li key={application.charge_id}>
+                          {application.service} · {periodLabel(application)} · {money(application.amount)}
+                          {application.automatic && ' · Crédito aplicado automáticamente'}
+                          {' · '}{application.applied_by ?? 'Sistema'} · <time dateTime={application.applied_at}>{new Date(application.applied_at).toLocaleString('es-PE')}</time>
+                        </li>
                       ))}
                     </ul>
                   )}
@@ -75,6 +82,21 @@ function StatementContent({ statement }: { statement: Statement }) {
           )}
         </section>
       </div>
+      <section className="building-surface" aria-labelledby="statement-carry">
+        <h2 id="statement-carry">Saldos de periodos anteriores</h2>
+        <p>El total pendiente ya incluye estos saldos. Cada registro conserva el importe al arrastrarlo y el saldo actual del cargo de origen.</p>
+        {carries.length === 0 ? <p>No hay arrastres en el periodo seleccionado.</p> : (
+          <dl className="building-details">
+            {carries.map((carry) => (
+              <div key={`${carry.charge_id}:${periodKey(carry)}`}>
+                <dt>{carry.service} · De {periodLabel({ billing_year: carry.source_year, billing_month: carry.source_month })} a {periodLabel(carry)}</dt>
+                <dd>Saldo al arrastrar {money(carry.amount)} · Pendiente actual {money(carry.balance)}</dd>
+                <dd>{carry.recorded_by ?? 'Sistema'} · <time dateTime={carry.recorded_at}>{new Date(carry.recorded_at).toLocaleString('es-PE')}</time></dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </section>
     </>
   )
 }

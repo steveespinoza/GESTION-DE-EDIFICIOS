@@ -36,6 +36,7 @@ from app.billing.models import (
     ServiceInvoice,
     UnitCharge,
 )
+from app.collections.ledger import settle_building
 from app.identity.models import Account
 from app.properties.models import Unit
 from app.properties.service import lock_building
@@ -226,7 +227,10 @@ def reading_defaults(
 
 
 def create_invoice(
-    db: Session, building_id: UUID, data: LinearInvoiceInput | MeteredInvoiceInput
+    db: Session,
+    building_id: UUID,
+    data: LinearInvoiceInput | MeteredInvoiceInput,
+    issued_by: UUID | None = None,
 ) -> InvoiceDetail:
     # Unit registration and invoice issuance serialize on the building.
     if lock_building(db, building_id) is None:
@@ -270,6 +274,7 @@ def create_invoice(
                 for (unit_id, number), amount in zip(units, amounts, strict=True)
             ]
         db.add_all(charges)
+        settle_building(db, building_id, issued_by)
         result = invoice_detail(invoice, category.name, charges, readings)
         db.commit()
     except InvoiceConflict:

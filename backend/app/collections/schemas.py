@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated
 from uuid import UUID
@@ -39,6 +39,20 @@ class AppliedCharge(AccountingPeriod):
     charge_id: UUID
     service: str
     amount: Decimal
+    applied_at: datetime
+    applied_by: str | None
+    automatic: bool
+
+
+class CarryForwardDetail(AccountingPeriod):
+    charge_id: UUID
+    source_year: int
+    source_month: int
+    service: str
+    amount: Decimal
+    balance: Decimal
+    recorded_at: datetime
+    recorded_by: str | None
 
 
 class PaymentDetail(AccountingPeriod):
@@ -57,3 +71,4 @@ class Statement(BaseModel):
     credit: Decimal
     charges: list[StatementCharge]
     payments: list[PaymentDetail]
+    carry_forwards: list[CarryForwardDetail]

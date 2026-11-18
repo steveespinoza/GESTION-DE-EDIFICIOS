@@ -146,7 +146,9 @@ def test_partial_payment_locks_original_invoice_and_replays_only_once(
         assert db.scalar(select(PaymentApplication.amount_cents)) == 1000
 
 
-def test_cutoff_credit_and_exact_payment_are_reconciled(admin, session_header, ledger):
+def test_payment_period_is_a_reference_and_credit_covers_all_issued_charges(
+    admin, session_header, ledger
+):
     (building, _), (unit_id, _), _ = ledger
     endpoint = f"{building}/units/{unit_id}"
     december = admin.post(
@@ -159,13 +161,16 @@ def test_cutoff_credit_and_exact_payment_are_reconciled(admin, session_header, l
         ),
     )
     assert december.status_code == 201
-    assert december.json()["credit"] == "10.00"
-    assert [item["amount"] for item in december.json()["applications"]] == ["50.00"]
+    assert december.json()["credit"] == "0.00"
+    assert [item["amount"] for item in december.json()["applications"]] == [
+        "50.00",
+        "10.00",
+    ]
     exact = admin.post(
         f"{endpoint}/payments", headers=session_header, json=payment_data("50.00")
     )
     assert exact.status_code == 201
-    assert exact.json()["credit"] == "0.00"
+    assert exact.json()["credit"] == "10.00"
     assert [item["billing_month"] for item in exact.json()["applications"]] == [1]
     statement = admin.get(f"{endpoint}/statement").json()
     assert statement["balance"] == "0.00"
@@ -244,6 +249,64 @@ def send_report(client, path, header, data, content=b"%PDF-1.7\nsynthetic proof"
     )
 
 
+def test_approved_report_credit_applies_to_a_later_invoice_once(
+    admin, ledger, session_header, sign_in, payment_storage, sessions
+):
+    (building, _), (unit_id, _), previous = ledger
+    assert sign_in("test-owner").status_code == 200
+    sent = send_report(
+        admin,
+        f"/api/owner/properties/{unit_id}/payment-reports",
+        session_header,
+        payment_data("110.00", filename="pago.pdf"),
+    )
+    assert sent.status_code == 201
+    report = f"{building}/payment-reports/{sent.json()['id']}"
+    assert sign_in("test-admin").status_code == 200
+    approval = {"amount": "110.00", "received_on": "2027-01-08", "proof_revision": 0}
+    assert (
+        admin.put(
+            f"{report}/approval", json=approval, headers=session_header
+        ).status_code
+        == 200
+    )
+    statement = f"{building}/units/{unit_id}/statement"
+    assert admin.get(statement).json()["credit"] == "10.00"
+    new = admin.post(
+        f"{building}/invoices",
+        headers=session_header,
+        json={
+            "category_id": previous[0]["category_id"],
+            "billing_year": 2027,
+            "billing_month": 2,
+            "start_date": "2027-02-01",
+            "end_date": "2027-02-25",
+            "total_amount": "50.00",
+            "total_volume": "1.000",
+            "readings": [
+                {
+                    "unit_id": unit_id,
+                    "previous_reading": "2.000",
+                    "current_reading": "3.000",
+                }
+            ],
+        },
+    )
+    assert new.status_code == 201, new.text
+    assert (
+        admin.put(
+            f"{report}/approval", json=approval, headers=session_header
+        ).status_code
+        == 200
+    )
+    result = admin.get(statement).json()
+    assert (result["balance"], result["credit"]) == ("40.00", "0.00")
+    assert len(result["payments"]) == 1
+    assert result["payments"][0]["applications"][-1]["automatic"] is True
+    with sessions() as db:
+        assert db.scalar(select(func.count()).select_from(Payment)) == 1
+
+
 def test_payment_report_approval_is_atomic_idempotent_and_scoped(
     admin, ledger, session_header, sign_in, sessions, payment_storage
 ):
@@ -302,7 +365,7 @@ def test_payment_report_approval_is_atomic_idempotent_and_scoped(
         admin.get(f"{building}/invoices/{invoices[0]['id']}").json()[
             "accounting_locked"
         ]
-        is False
+        is True  # December was carried into January when the second invoice was issued.
     )
     confirmed = {
         "received_on": "2027-01-08",

@@ -27,7 +27,7 @@ Los identificadores se comparten con la [matriz de paridad](paridad.md). Los [ca
 | FAC-02 | Registrar facturas con periodo, fechas, monto, volumen según el servicio, adjuntos y comprobante. Consultar el histórico y corregir facturas según su estado. |
 | FAC-03 | Precargar la lectura anterior pertinente, admitir tres decimales, tratar reinicios de medidor y generar cargos que cuadren con el total facturado. |
 | COB-01 | Reportar y revisar un comprobante de pago externo. Registrar o confirmar el pago con fecha y monto y mostrar su detalle en la cobranza del periodo. |
-| COB-02 | Aplicar pagos exactos, parciales y excedentes. Conservar el origen de los saldos, créditos y arrastres y evitar efectos duplicados. |
+| COB-02 | Aplicar pagos exactos, parciales y excedentes. Aplicar automáticamente el crédito a los cargos de la misma unidad. Conservar el origen de los saldos y arrastres y evitar efectos duplicados. |
 | POR-01 | Mostrar las propiedades asociadas a la cuenta, sus pendientes, instrucciones de pago y estados de cuenta por unidad y periodo. |
 | DOC-01 | Emitir PDF por unidad y consolidado por edificio. Exportar Excel mensual, de transparencia y del histórico de cobranzas. |
 | DOC-02 | Emitir y regenerar recibos por lote con fecha de vencimiento, versión y resultado por unidad. Permitir el reintento de fallos. |
@@ -50,4 +50,4 @@ Los identificadores se comparten con la [matriz de paridad](paridad.md). Los [ca
 
 Los pagos se realizan fuera de la aplicación. La versión de portafolio usa datos ficticios y un entorno propio. La migración de registros empresariales queda fuera de esta entrega.
 
-Queda por confirmar si existe un flujo que requiera un administrador restringido a un edificio o una cuenta de inquilino. También quedan por definir el tratamiento de periodos omitidos, los ajustes de periodos liquidados y las columnas del Excel de transparencia.
+Queda por confirmar si existe un flujo que requiera un administrador restringido a un edificio o una cuenta de inquilino. También quedan por definir los ajustes de periodos liquidados y las columnas del Excel de transparencia. Los periodos sin facturas se omiten al registrar arrastres, conservando el periodo de origen.

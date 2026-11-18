@@ -2,19 +2,22 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import BigInteger, and_, cast, func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.billing.metering import from_milli
-from app.billing.models import MeterReading, ServiceCategory, ServiceInvoice, UnitCharge
-from app.collections.models import Payment, PaymentApplication
+from app.billing.models import ServiceCategory, ServiceInvoice, UnitCharge
+from app.collections.ledger import charge_rows, settle_unit
+from app.collections.models import BalanceCarryForward, Payment, PaymentApplication
 from app.collections.schemas import (
     AppliedCharge,
+    CarryForwardDetail,
     PaymentDetail,
     PaymentInput,
     Statement,
     StatementCharge,
 )
+from app.identity.models import Account
 from app.properties.models import Building, Unit
 from app.properties.service import lock_building
 
@@ -40,52 +43,22 @@ def unit_in_building(db: Session, building_id: UUID, unit_id: UUID) -> Unit:
     return unit
 
 
-def charge_rows(db: Session, unit_id: UUID):
-    applied = (
-        select(
-            cast(
-                func.coalesce(func.sum(PaymentApplication.amount_cents), 0), BigInteger
-            )
-        )
-        .where(PaymentApplication.charge_id == UnitCharge.id)
-        .scalar_subquery()
-    )
-    return db.execute(
-        select(
-            UnitCharge,
-            ServiceInvoice,
-            ServiceCategory.name,
-            applied,
-            MeterReading.consumption_milli,
-        )
-        .join(ServiceInvoice, UnitCharge.invoice_id == ServiceInvoice.id)
-        .join(ServiceCategory, ServiceInvoice.category_id == ServiceCategory.id)
-        .outerjoin(
-            MeterReading,
-            and_(
-                MeterReading.invoice_id == UnitCharge.invoice_id,
-                MeterReading.unit_id == UnitCharge.unit_id,
-            ),
-        )
-        .where(UnitCharge.unit_id == unit_id)
-        .order_by(
-            ServiceInvoice.billing_year,
-            ServiceInvoice.billing_month,
-            ServiceInvoice.end_date,
-            ServiceInvoice.id,
-        )
-    ).all()
-
-
 def payment_details(
     db: Session, unit_id: UUID, payment_id: UUID | None = None
 ) -> list[PaymentDetail]:
     query = (
-        select(Payment, PaymentApplication, ServiceInvoice, ServiceCategory.name)
+        select(
+            Payment,
+            PaymentApplication,
+            ServiceInvoice,
+            ServiceCategory.name,
+            Account.username,
+        )
         .outerjoin(PaymentApplication, Payment.id == PaymentApplication.payment_id)
         .outerjoin(UnitCharge, UnitCharge.id == PaymentApplication.charge_id)
         .outerjoin(ServiceInvoice, ServiceInvoice.id == UnitCharge.invoice_id)
         .outerjoin(ServiceCategory, ServiceCategory.id == ServiceInvoice.category_id)
+        .outerjoin(Account, Account.id == PaymentApplication.applied_by_id)
         .where(Payment.unit_id == unit_id)
         .order_by(
             Payment.received_on.desc(),
@@ -100,7 +73,7 @@ def payment_details(
     if payment_id is not None:
         query = query.where(Payment.id == payment_id)
     details: dict[UUID, PaymentDetail] = {}
-    for payment, application, invoice, service in db.execute(query):
+    for payment, application, invoice, service, actor in db.execute(query):
         if payment.id not in details:
             details[payment.id] = PaymentDetail(
                 id=payment.id,
@@ -117,11 +90,51 @@ def payment_details(
                     charge_id=application.charge_id,
                     service=service,
                     amount=money(application.amount_cents),
+                    applied_at=application.applied_at.astimezone(UTC),
+                    applied_by=actor,
+                    automatic=application.automatic,
                     billing_year=invoice.billing_year,
                     billing_month=invoice.billing_month,
                 )
             )
     return list(details.values())
+
+
+def carry_details(
+    db: Session, unit_id: UUID, balances: dict[UUID, Decimal]
+) -> list[CarryForwardDetail]:
+    rows = db.execute(
+        select(
+            BalanceCarryForward, ServiceInvoice, ServiceCategory.name, Account.username
+        )
+        .join(UnitCharge, UnitCharge.id == BalanceCarryForward.charge_id)
+        .join(ServiceInvoice, ServiceInvoice.id == UnitCharge.invoice_id)
+        .join(ServiceCategory, ServiceCategory.id == ServiceInvoice.category_id)
+        .outerjoin(Account, Account.id == BalanceCarryForward.recorded_by_id)
+        .where(UnitCharge.unit_id == unit_id)
+        .order_by(
+            BalanceCarryForward.billing_year,
+            BalanceCarryForward.billing_month,
+            ServiceInvoice.billing_year,
+            ServiceInvoice.billing_month,
+            UnitCharge.id,
+        )
+    )
+    return [
+        CarryForwardDetail(
+            charge_id=carry.charge_id,
+            billing_year=carry.billing_year,
+            billing_month=carry.billing_month,
+            source_year=invoice.billing_year,
+            source_month=invoice.billing_month,
+            service=service,
+            amount=money(carry.amount_cents),
+            balance=balances[carry.charge_id],
+            recorded_at=carry.recorded_at.astimezone(UTC),
+            recorded_by=actor,
+        )
+        for carry, invoice, service, actor in rows
+    ]
 
 
 def read_statement(
@@ -170,6 +183,9 @@ def read_statement(
         credit=sum((payment.credit for payment in payments), money(0)),
         charges=charges,
         payments=payments,
+        carry_forwards=carry_details(
+            db, unit.id, {charge.id: charge.balance for charge in charges}
+        ),
     )
 
 
@@ -209,27 +225,14 @@ def stage_payment(
             )
         return payment_details(db, unit_id, existing.id)[0], False
 
-    payment = Payment(**attributes, credit_cents=total, recorded_by_id=user_id)
+    payment = Payment(
+        **attributes,
+        credit_cents=total,
+        recorded_by_id=user_id,
+        recorded_at=datetime.now(UTC),
+    )
     db.add(payment)
     db.flush()
-    cutoff = (data.billing_year, data.billing_month)
-    recorded_at = datetime.now(UTC)
-    for charge, invoice, _, applied, _ in charge_rows(db, unit_id):
-        if (
-            payment.credit_cents == 0
-            or (invoice.billing_year, invoice.billing_month) > cutoff
-        ):
-            break
-        amount = min(charge.amount_cents - applied, payment.credit_cents)
-        if amount <= 0:
-            continue
-        db.add(
-            PaymentApplication(
-                payment_id=payment.id, charge_id=charge.id, amount_cents=amount
-            )
-        )
-        payment.credit_cents -= amount
-        if invoice.accounting_locked_at is None:
-            invoice.accounting_locked_at = recorded_at
+    settle_unit(db, unit_id, user_id, new_payment_id=payment.id)
     result = payment_details(db, unit_id, payment.id)[0]
     return result, True
