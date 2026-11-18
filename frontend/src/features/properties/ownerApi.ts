@@ -13,7 +13,7 @@ interface OwnerBuilding {
 }
 
 interface OwnerBuildingGroup extends OwnerBuilding {
-  units: OwnerUnit[]
+  units: (OwnerUnit & { balance: string; credit: string })[]
 }
 
 interface OwnerUnitDetail extends OwnerUnit {

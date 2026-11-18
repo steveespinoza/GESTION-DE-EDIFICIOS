@@ -20,8 +20,13 @@ class OwnerBuilding(BaseModel):
     address: str | None
 
 
+class OwnerUnitSummary(OwnerUnit):
+    balance: Decimal
+    credit: Decimal
+
+
 class OwnerBuildingGroup(OwnerBuilding):
-    units: list[OwnerUnit] = Field(default_factory=list)
+    units: list[OwnerUnitSummary] = Field(default_factory=list)
 
 
 class PaymentInstructions(BaseModel):

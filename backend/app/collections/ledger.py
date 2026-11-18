@@ -47,7 +47,7 @@ def adjustment_cents():
     )
 
 
-def charge_rows(db: Session, unit_id: UUID):
+def net_applied_cents():
     applied = (
         select(
             cast(
@@ -55,6 +55,7 @@ def charge_rows(db: Session, unit_id: UUID):
             )
         )
         .where(PaymentApplication.charge_id == UnitCharge.id)
+        .correlate(UnitCharge)
         .scalar_subquery()
     )
     released = (
@@ -72,12 +73,46 @@ def charge_rows(db: Session, unit_id: UUID):
         .correlate(UnitCharge)
         .scalar_subquery()
     )
+    return applied - released
+
+
+def unit_balance_cents():
+    return (
+        select(
+            cast(
+                func.coalesce(
+                    func.sum(
+                        UnitCharge.amount_cents
+                        + adjustment_cents()
+                        - net_applied_cents()
+                    ),
+                    0,
+                ),
+                BigInteger,
+            )
+        )
+        .where(UnitCharge.unit_id == Unit.id)
+        .correlate(Unit)
+        .scalar_subquery()
+    )
+
+
+def unit_credit_cents():
+    return (
+        select(cast(func.coalesce(func.sum(Payment.credit_cents), 0), BigInteger))
+        .where(Payment.unit_id == Unit.id)
+        .correlate(Unit)
+        .scalar_subquery()
+    )
+
+
+def charge_rows(db: Session, unit_id: UUID):
     return db.execute(
         select(
             UnitCharge,
             ServiceInvoice,
             ServiceCategory.name,
-            applied - released,
+            net_applied_cents(),
             MeterReading.consumption_milli,
             adjustment_cents(),
         )

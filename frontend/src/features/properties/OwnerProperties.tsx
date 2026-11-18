@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 
+import { money } from '../collections/format'
 import { PropertyRequestError } from './api'
 import { listMyProperties, readMyUnit } from './ownerApi'
 import { usePropertyQuery } from './usePropertyQuery'
@@ -36,9 +37,16 @@ export function MyProperties() {
           {building.address && <p>{building.address}</p>}
           <ul className="building-grid">
             {building.units.map((unit) => (
-              <li key={unit.id} className="building-surface">
-                <Link to={`unidades/${unit.id}`}>Unidad {unit.number}</Link>
+              <li key={unit.id} className="building-surface owner-unit-summary">
+                <h3><Link to={`unidades/${unit.id}`}>Unidad {unit.number}</Link></h3>
                 <p>{unit.area_sqm} m²</p>
+                <dl className="building-details">
+                  <div><dt>Total pendiente</dt><dd>{money(unit.balance)}</dd></div>
+                  <div><dt>Crédito disponible</dt><dd>{money(unit.credit)}</dd></div>
+                </dl>
+                <Link to={`unidades/${unit.id}/estado-de-cuenta`} aria-label={`Estado de cuenta de la unidad ${unit.number} en ${building.name}`}>
+                  Estado de cuenta
+                </Link>
               </li>
             ))}
           </ul>

@@ -2,10 +2,11 @@ from decimal import Decimal
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import event, select
 
 from app.identity.models import Account, RoleName
 from app.properties.models import Building, Unit
+from app.properties.owner_service import list_properties
 
 PROPERTIES = "/api/owner/properties"
 
@@ -83,8 +84,20 @@ def test_list_groups_only_the_current_owners_units(client, sign_in, portfolio):
             "name": "Alameda",
             "address": "Av. de la Demo 148",
             "units": [
-                {"id": portfolio["unit_b"], "number": "101-A", "area_sqm": "45.50"},
-                {"id": portfolio["unit_c"], "number": "101-B", "area_sqm": "45.50"},
+                {
+                    "id": portfolio["unit_b"],
+                    "number": "101-A",
+                    "area_sqm": "45.50",
+                    "balance": "0.00",
+                    "credit": "0.00",
+                },
+                {
+                    "id": portfolio["unit_c"],
+                    "number": "101-B",
+                    "area_sqm": "45.50",
+                    "balance": "0.00",
+                    "credit": "0.00",
+                },
             ],
         },
         {
@@ -92,7 +105,13 @@ def test_list_groups_only_the_current_owners_units(client, sign_in, portfolio):
             "name": "Cedros",
             "address": None,
             "units": [
-                {"id": portfolio["unit_a"], "number": "004", "area_sqm": "45.50"}
+                {
+                    "id": portfolio["unit_a"],
+                    "number": "004",
+                    "area_sqm": "45.50",
+                    "balance": "0.00",
+                    "credit": "0.00",
+                }
             ],
         },
     ]
@@ -160,6 +179,131 @@ def test_owner_without_units_receives_an_empty_list(client, sign_in):
     response = client.get(PROPERTIES)
     assert response.status_code == 200
     assert response.json() == []
+
+
+def test_portfolio_totals_use_one_query_for_multiple_units(sessions, portfolio):
+    with sessions() as db:
+        owner_id = db.scalar(select(Account.id).where(Account.username == "test-owner"))
+        statements = []
+
+        def count_statements(conn, cursor, statement, parameters, context, many):
+            statements.append(statement)
+
+        connection = db.connection()
+        event.listen(connection, "before_cursor_execute", count_statements)
+        try:
+            groups = list_properties(db, owner_id)
+        finally:
+            event.remove(connection, "before_cursor_execute", count_statements)
+        assert sum(len(group.units) for group in groups) == 3
+        assert len(statements) == 1
+
+
+def test_summary_reconciles_adjustments_releases_payments_and_carries(
+    admin, sign_in, session_header, portfolio
+):
+    path = f"/api/admin/buildings/{portfolio['alameda']}"
+
+    def post(endpoint, data):
+        response = admin.post(endpoint, json=data, headers=session_header)
+        assert response.status_code == 201, response.text
+        return response.json()
+
+    category = post(f"{path}/services", {"name": "Cuota", "calculation_type": "LINEAR"})
+
+    def issue(year, month, amount):
+        return post(
+            f"{path}/invoices",
+            {
+                "category_id": category["id"],
+                "billing_year": year,
+                "billing_month": month,
+                "start_date": f"{year}-{month:02}-01",
+                "end_date": f"{year}-{month:02}-25",
+                "total_amount": amount,
+            },
+        )
+
+    def pay(key, amount):
+        return post(
+            f"{path}/units/{portfolio[key]}/payments",
+            {
+                "request_id": str(uuid4()),
+                "billing_year": 2026,
+                "billing_month": 12,
+                "received_on": "2026-12-25",
+                "amount": amount,
+            },
+        )
+
+    december = issue(2026, 12, "300.03")  # S/ 100.01 per unit.
+    pay("unit_b", "120.01")
+    issue(2027, 2, "150.00")  # Credit applies; January has no invoice.
+    pay("unit_b", "15.00")
+    pay("unit_b", "15.00")
+    charge = next(c for c in december["charges"] if c["unit_id"] == portfolio["unit_b"])
+    endpoint = f"{path}/invoices/{december['id']}/charges/{charge['id']}/adjustments"
+    post(
+        endpoint,
+        {
+            "request_id": str(uuid4()),
+            "revision": 0,
+            "new_amount": "80.01",
+            "reason": "Revisión",
+        },
+    )
+    # Consume part of the released credit into a new application of the same charge.
+    post(
+        endpoint,
+        {
+            "request_id": str(uuid4()),
+            "revision": 1,
+            "new_amount": "95.01",
+            "reason": "Revisión final",
+        },
+    )
+    pay("foreign_shared", "10.01")
+    # A credit-only unit in a different building must also appear.
+    post(
+        f"/api/admin/buildings/{portfolio['cedros']}/units/{portfolio['unit_a']}/payments",
+        {
+            "request_id": str(uuid4()),
+            "billing_year": 2026,
+            "billing_month": 12,
+            "received_on": "2026-12-25",
+            "amount": "7.03",
+        },
+    )
+
+    for username, expected in (
+        (
+            "test-owner",
+            {
+                "unit_a": ("0.00", "7.03"),
+                "unit_b": ("0.00", "5.00"),
+                "unit_c": ("150.01", "0.00"),
+            },
+        ),
+        (
+            "test-other-owner",
+            {"foreign_shared": ("140.00", "0.00"), "foreign": ("0.00", "0.00")},
+        ),
+    ):
+        assert sign_in(username).status_code == 200
+        response = admin.get(PROPERTIES)
+        assert response.status_code == 200
+        summaries = {
+            unit["id"]: unit for group in response.json() for unit in group["units"]
+        }
+        assert set(summaries) == {portfolio[key] for key in expected}
+        for key, totals in expected.items():
+            summary = summaries[portfolio[key]]
+            statement = admin.get(f"{PROPERTIES}/{portfolio[key]}/statement").json()
+            assert (summary["balance"], summary["credit"]) == totals
+            assert totals == (statement["balance"], statement["credit"])
+            if key == "unit_c":
+                assert len(statement["carry_forwards"]) == 1
+                assert statement["carry_forwards"][0]["amount"] == "100.01"
 
 
 @pytest.mark.parametrize("path", (PROPERTIES, f"{PROPERTIES}/{uuid4()}"))
