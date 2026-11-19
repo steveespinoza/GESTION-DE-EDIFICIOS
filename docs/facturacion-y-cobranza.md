@@ -97,3 +97,9 @@ El consolidado refleja movimientos vigentes al descargar, con el mismo alcance t
 Desde Cobranzas, el SuperAdmin prepara un lote con periodo, vencimiento común y motivo. La selección de unidades queda guardada. Cada unidad con cargos genera una versión nueva del recibo; las que no tienen cargos se identifican como omitidas. El resultado individual conserva lo emitido y permite continuar pendientes o reintentar fallos recuperables desde el historial.
 
 Un reintento no regenera una unidad exitosa. Si cambian el vencimiento o la versión individual antes de emitir una unidad pendiente, el resultado informa el conflicto y pide preparar otro lote. Cada PDF refleja el estado financiero de su momento de emisión. La [decisión de lotes](decisiones/0007-recibos-por-lote.md) define persistencia, transacciones, recuperación y operación de la migración 0016.
+
+## Excel mensual del edificio
+
+Desde Cobranzas, el SuperAdmin descarga el periodo elegido en tres hojas: consolidado de todas las unidades, matriz de parámetros y saldos por servicio, y detalle de lecturas y cargos. Los totales usan los mismos importes del PDF consolidado. Los filtros de la lista no recortan el archivo.
+
+El reparto original conserva sus unidades y céntimos; los ajustes y aplicaciones actuales aparecen separados. El pendiente incluye saldos anteriores una sola vez y mantiene el crédito actual separado. La [decisión del Excel mensual](decisiones/0008-excel-mensual-del-edificio.md) detalla alcance, fórmulas, permisos y operación. La descarga es directa y no requiere migración ni S3.

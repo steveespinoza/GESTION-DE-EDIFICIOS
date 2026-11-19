@@ -41,4 +41,4 @@ La respuesta se genera en memoria y se descarga directamente. No guarda archivos
 
 Las [pruebas del consolidado](../../backend/tests/test_consolidation.py) comparan el detalle con los estados de cuenta, concilian servicios, crédito y ajustes con liberaciones, excluyen periodos posteriores, mantienen unidades nuevas sin cargos y aíslan dos edificios y dos propietarios. También comprueban el bloqueo frente a un pago concurrente, importes altos completos, texto especial, paginación y generación simultánea.
 
-El [recorrido local](../verificacion.md#recorrido-del-pdf-consolidado-mensual) documenta descarga, revisión de páginas, teclado, carga, error, reintento, vacío y móvil. Siguen pendientes el recorrido desplegado, Excel mensual y de cobranzas y emisión de recibos por lote.
+El [recorrido local](../verificacion.md#recorrido-del-pdf-consolidado-mensual) documenta descarga, revisión de páginas, teclado, carga, error, reintento, vacío y móvil. Los [recibos por lote](0007-recibos-por-lote.md) y el [Excel mensual](0008-excel-mensual-del-edificio.md) tienen decisiones propias. Siguen pendientes el recorrido desplegado y el Excel histórico de cobranzas.

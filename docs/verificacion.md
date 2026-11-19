@@ -294,3 +294,23 @@ La suite completa pasó con **191 pruebas** en PostgreSQL 17 aislado: diecisiete
 La prueba de migración sube desde 0015 con cargos, pagos, aplicaciones, vencimientos y un recibo previo; compara las tablas anteriores, comprueba las nuevas restricciones y protege el descenso con lotes.
 
 El 18 de noviembre de 2026 apliqué `0016_receipt_batches` en Neon por conexión directa, después de generar un respaldo completo en formato personalizado y comprobar que su índice fuera legible. Las huellas y cantidades de las veinte tablas anteriores coincidieron antes y después. La base quedó con veintitrés tablas, las dos nuevas vacías y `alembic check` sin diferencias. Quedan pendientes el permiso S3 para `receipts/` y el recorrido del flujo desplegado; esta migración no escribió archivos ni modificó permisos de almacenamiento.
+
+## Recorrido del Excel mensual del edificio
+
+La [decisión del Excel mensual](decisiones/0008-excel-mensual-del-edificio.md) define el consolidado, la matriz de servicios y el detalle. La verificación local del 18 de noviembre de 2026 utilizó datos sintéticos con tres unidades, dos servicios, dos periodos, pagos parciales, un ajuste y un segundo edificio con crédito sin cargos.
+
+![Descarga del Excel mensual desde Cobranzas](imagenes/excel-mensual.jpg)
+
+Desde Cobranzas descargué octubre con Enter y con «Solo deudas vencidas» activo. Aunque la lista estaba vacía, el archivo mantuvo las tres unidades y sus dos servicios. El aviso de éxito recibió foco y la descarga produjo un XLSX de tres hojas. Las pruebas compararon sus importes con los estados de cuenta y el PDF consolidado.
+
+El ejemplo concilia 240.00 de cargos del mes, 55.00 aplicados, 185.00 pendientes del mes y 175.00 anteriores: 360.00 pendientes en total. La matriz concilia los 90.00 del agua y los 150.00 de mantenimiento; su diferencia de reparto es cero. El agua conserva 9.000 m³ de proveedor, 5.000 propios y 4.000 comunes, con tres unidades en el divisor.
+
+Importé el ejemplo con un lector independiente, recalculé sus fórmulas y revisé visualmente las tres hojas. No aparecieron errores de fórmula. Cambiar temporalmente un ajuste de 0 a 5 en una copia en memoria elevó los cargos de 240.00 a 245.00 y el pendiente de 360.00 a 365.00. El archivo de ejemplo se conservó sin esa modificación.
+
+Cambié a agosto. Una demora sintética deshabilitó el botón y el selector; el fallo de descarga mostró el aviso con foco. Tras retirar el fallo, el reintento descargó agosto correctamente. La vista de 390 × 844 no presentó desbordamiento horizontal. Otro edificio sin cargos mostró el mensaje de vacío. El propietario fue redirigido a su portal al abrir Cobranzas; la API denegó la descarga a dos propietarios y aisló los datos de ambos edificios.
+
+La suite completa pasó con **205 pruebas** en PostgreSQL 17 aislado, incluidas catorce del Excel mensual. Después de los ajustes finales de presentación y rangos de ordenación se repitieron las **51 pruebas** de Excel mensual, transparencia y consolidado: todas aprobadas. Ruff, formato, `alembic check` y `npm run build` correctos. Los casos cubren 100.00 entre tres unidades, consumo común, lecturas con tres decimales y reinicio, unidades agregadas después, ajustes con liberaciones, crédito separado, corte por periodo, textos literales, permisos y bloqueo de un pago concurrente durante las cinco consultas.
+
+Para reproducir, emitir servicios lineales y medidos en una base aislada, registrar pagos y ajustes y abrir Cobranzas. Elegir un periodo del Excel, descargar y contrastar unidades, servicios y saldos con el PDF y los estados de cuenta. Repetir con filtros activos, otro periodo y un edificio sin cargos.
+
+Esta entrega no requiere migración ni nuevas dependencias y no modifica Neon ni S3. Quedan pendientes la apertura en Microsoft Excel de escritorio y el recorrido desplegado; la revisión de cálculo y presentación se realizó con el lector independiente.
