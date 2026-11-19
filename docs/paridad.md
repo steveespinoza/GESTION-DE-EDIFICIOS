@@ -4,6 +4,8 @@ Este proyecto retoma los flujos del sistema de gestión inmobiliaria que desarro
 
 El detalle de cada capacidad está en [Requerimientos](requerimientos.md) y [Casos de uso](casos-de-uso.md). Los escenarios previstos están en [Verificación](verificacion.md).
 
+La [interfaz reorganizada](interfaz.md) conserva estos flujos y sus permisos. Su [recorrido local con ambos roles](verificacion.md#recorrido-de-la-interfaz-reorganizada) documenta navegación, tablas, exportaciones y vista móvil.
+
 | ID | Capacidad y criterio de aceptación | Estado |
 | --- | --- | --- |
 | IDE-01 | SuperAdmin y Propietario ingresan con usuario y contraseña, llegan al panel correcto y pueden salir. Las sesiones vencidas pierden acceso. | Verificado en [API](../backend/tests/test_identity.py) y [navegador](verificacion.md#recorrido-de-identidad). |

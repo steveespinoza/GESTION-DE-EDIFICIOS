@@ -2,6 +2,30 @@
 
 La verificación empieza con datos ficticios de dos edificios. Un propietario tiene una unidad en cada edificio y otro tiene una sola unidad. El SuperAdmin puede administrar ambos. Esta distribución permite comprobar el alcance de consultas, pagos, documentos y adjuntos.
 
+## Recorrido de la interfaz reorganizada
+
+La [organización visual](interfaz.md) retoma la paleta, tipografía y distribución del sistema anterior. Verifiqué el cambio localmente el 18 de noviembre de 2026 con datos sintéticos y PostgreSQL aislado.
+
+![Panel del edificio con navegación y módulos](imagenes/interfaz-panel.jpg)
+
+![Cobranzas agrupadas por periodo](imagenes/interfaz-cobranzas.jpg)
+
+Entré como SuperAdmin y recorrí edificios, panel, unidades, servicios, facturas, reportes de pago, cobranzas y recibos por lote desde la barra lateral. El contexto mostró el edificio seleccionado y el foco pasó al contenido al cambiar de ruta. Busqué una propietaria en Unidades y abrí su ficha. Abrí con teclado el alta de factura, las exportaciones y la configuración de vencimientos.
+
+En Cobranzas comprobé el pendiente global de 360.00 y las filas de octubre y agosto. El filtro de agosto conservó los importes 95.00, 100.00 y 100.00, con pendientes 0.00, 75.00 y 100.00. «Solo deudas vencidas» mostró el estado vacío correspondiente a la fecha de prueba. Descargué el PDF consolidado, el Excel mensual y el histórico desde la sección agrupada; los tres archivos se materializaron. Sus generadores y las reglas contables no cambiaron.
+
+Una demora sintética mostró la carga; un fallo de consulta mostró el error y «Volver a intentar» recuperó las tablas. Un edificio sin cargos mostró el vacío. En 390 × 844, el documento no tuvo desbordamiento horizontal: la tabla se desplazó dentro de su región. El menú móvil cerró con Escape y al navegar; Escape devolvió el foco al botón y restauró el desplazamiento del documento. Pasar a escritorio con el menú abierto también lo cerró.
+
+![Cobranzas en móvil](imagenes/interfaz-movil.jpg)
+
+Entré con dos propietarios. Una cuenta vio sus dos unidades de un edificio y otra de un segundo edificio con 7.03 de crédito; la otra vio solamente su unidad. Abrí Mi unidad y Estado de cuenta y recibos, y confirmé el contexto de la propiedad. Las rutas de unidades ajenas mostraron «No se encontró la unidad» sin revelar su nombre; una ruta administrativa redirigió al portal del propietario.
+
+![Navegación del propietario en su estado de cuenta](imagenes/interfaz-propietario.jpg)
+
+![Acceso con presentación lateral](imagenes/interfaz-acceso.jpg)
+
+`npm run build` pasó con TypeScript y Vite; `git diff --check` no detectó errores. Esta entrega cambia el frontend y no vuelve a ejecutar la suite del backend. La verificación descrita es local; falta el recorrido del diseño en el entorno desplegado. No se aplicaron migraciones ni cambios en Neon o S3.
+
 ## Escenarios de aceptación previstos
 
 | Prueba | Requisitos | Resultado esperado |

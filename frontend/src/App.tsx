@@ -57,10 +57,10 @@ export function App() {
 
   return (
     <>
-      <header className="site-header">
+      {auth.status !== 'ready' && <header className="site-header">
         <div className="shell">Gestión de Edificios</div>
-      </header>
-      <main className="shell">
+      </header>}
+      <div className={user ? 'authenticated-root' : auth.status === 'ready' ? 'public-main login-page' : 'shell public-main'} role={user ? undefined : 'main'}>
         {auth.status === 'loading' && <p role="status">Comprobando la sesión…</p>}
         {auth.status === 'unavailable' && (
           <section className="status-card" aria-labelledby="connection-title">
@@ -79,7 +79,7 @@ export function App() {
             <Route
               path="/admin"
               element={user?.role === 'SuperAdmin' ? (
-                <PropertyWorkspace role="SuperAdmin" onSignedOut={endSession} />
+                <PropertyWorkspace user={user} onSignedOut={endSession} />
               ) : redirect}
             >
               <Route index element={<BuildingsList />} />
@@ -102,7 +102,7 @@ export function App() {
             <Route
               path="/propietario"
               element={user?.role === 'Propietario' ? (
-                <PropertyWorkspace role="Propietario" onSignedOut={endSession} />
+                <PropertyWorkspace user={user} onSignedOut={endSession} />
               ) : redirect}
             >
               <Route index element={<MyProperties />} />
@@ -112,7 +112,7 @@ export function App() {
             <Route path="*" element={redirect} />
           </Routes>
         )}
-      </main>
+      </div>
     </>
   )
 }

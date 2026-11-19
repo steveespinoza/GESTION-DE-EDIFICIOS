@@ -4,6 +4,7 @@ import { Link, Navigate, useParams } from 'react-router-dom'
 import { BuildingForm } from './BuildingForm'
 import { buildingErrorMessage, PropertyRequestError, readBuilding } from './api'
 import { usePropertyQuery } from './usePropertyQuery'
+import { WorkspaceIcon, type WorkspaceIconName } from './WorkspaceIcon'
 
 function BuildingRecord({ id, editing }: { id: string; editing: boolean }) {
   const load = useCallback((signal: AbortSignal) => readBuilding(id, signal), [id])
@@ -29,18 +30,23 @@ function BuildingRecord({ id, editing }: { id: string; editing: boolean }) {
     { label: 'CCI', value: building.cci },
     { label: 'Correo de contacto', value: building.contact_email },
   ]
+  const modules: { path: string; title: string; description: string; icon: WorkspaceIconName }[] = [
+    { path: 'unidades', title: 'Unidades', description: 'Propietarios, áreas y datos de cada unidad.', icon: 'units' },
+    { path: 'servicios', title: 'Servicios', description: 'Catálogo y criterios de reparto del edificio.', icon: 'services' },
+    { path: 'facturas', title: 'Facturas y consumos', description: 'Lecturas, facturas del proveedor y cargos.', icon: 'invoice' },
+    { path: 'reportes-de-pago', title: 'Reportes de pago', description: 'Comprobantes pendientes de revisión y pagos reportados.', icon: 'payments' },
+    { path: 'cobranzas', title: 'Cobranzas', description: 'Saldos, vencimientos y exportaciones del edificio.', icon: 'collections' },
+    { path: 'recibos-por-lote', title: 'Recibos por lote', description: 'Emisión por periodo, versiones y seguimiento por unidad.', icon: 'documents' },
+  ]
   return (
     <section className="building-page" aria-labelledby="building-title">
       <div className="building-page-heading">
         <h1 id="building-title">{building.name}</h1>
-        <div className="building-form-actions">
-          <Link className="button-link" to="unidades">Unidades</Link>
-          <Link to="servicios">Servicios</Link>
-          <Link to="facturas">Facturas</Link>
-          <Link to="reportes-de-pago">Reportes de pago</Link>
-          <Link to="cobranzas">Cobranzas</Link>
-          <Link to="editar">Editar edificio</Link>
-        </div>
+        <Link className="secondary-link" to="editar">Editar edificio</Link>
+      </div>
+      <p className="page-description">Panel de control · {building.address ?? 'Administración del edificio'}</p>
+      <div className="workspace-module-grid">
+        {modules.map((module) => <Link key={module.path} to={module.path} className="workspace-module"><span className="module-icon"><WorkspaceIcon name={module.icon} /></span><span className="module-copy"><strong>{module.title}</strong><span>{module.description}</span></span><WorkspaceIcon name="arrow" /></Link>)}
       </div>
       <div className="building-grid">
         <section className="building-surface" aria-labelledby="general-title">
