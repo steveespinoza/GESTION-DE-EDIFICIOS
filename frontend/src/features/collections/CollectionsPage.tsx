@@ -93,6 +93,7 @@ function CollectionsRecord({ buildingId }: { buildingId: string }) {
     <section className="building-page unit-statement" aria-labelledby="collections-title">
       <Link to={`/admin/edificios/${buildingId}`}>Volver al edificio</Link>
       <h1 id="collections-title">Cobranzas</h1>
+      <Link className="button-link" to={`/admin/edificios/${buildingId}/recibos-por-lote`}>Emitir recibos por lote</Link>
       {saved && <p ref={notice} tabIndex={-1} role="status">Vencimiento de {periodLabel(saved)} registrado para {saved.due_date}.</p>}
       {query.status === 'loading' && <p role="status">Cargando cobranzas…</p>}
       {query.status === 'error' && <div><p role="alert">{query.error instanceof PropertyRequestError && query.error.status === 404 ? 'No se encontró el edificio.' : 'No se pudieron cargar las cobranzas.'}</p><button type="button" onClick={retry}>Volver a intentar</button></div>}

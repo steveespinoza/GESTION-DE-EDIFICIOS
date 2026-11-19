@@ -14,6 +14,7 @@ from app.billing.router import router as billing_router
 from app.collections.report_router import router as payment_reports_router
 from app.collections.router import router as collections_router
 from app.database import configured_engine
+from app.documents.batch_router import router as receipt_batches_router
 from app.documents.router import router as receipts_router
 from app.identity.router import router as identity_router
 from app.properties.owner_router import router as owner_properties_router
@@ -34,6 +35,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="Gestión de Edificios", version="0.1.0", lifespan=lifespan)
+app.include_router(receipt_batches_router)
 app.include_router(identity_router)
 app.include_router(properties_router)
 app.include_router(units_router)

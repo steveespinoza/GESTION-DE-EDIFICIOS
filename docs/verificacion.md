@@ -270,3 +270,27 @@ La suite completa pasó con **173 pruebas** en PostgreSQL 17 aislado, incluidas 
 Para reproducir, emitir facturas en dos periodos de una base aislada, registrar pagos y ajustes y abrir Cobranzas. Elegir un periodo del consolidado, descargar y contrastar servicios y unidades con sus estados de cuenta. Repetir con un filtro de la lista activo y con otro edificio sin cargos.
 
 La entrega no requiere migración, nuevas dependencias ni S3. Queda pendiente verificar el flujo en el entorno desplegado. No se aplicaron cambios en Neon ni en permisos de almacenamiento durante esta verificación.
+
+## Recorrido de recibos por lote
+
+La [decisión de lotes](decisiones/0007-recibos-por-lote.md) define la preparación y los resultados por unidad. La verificación local del 18 de noviembre de 2026 utilizó tres unidades de un edificio, dos propietarios, otro edificio y almacenamiento aislado.
+
+![Resultado de emisión y reintento por unidad](imagenes/recibos-por-lote.jpg)
+
+![Resultado parcial conservado al detener el proceso](imagenes/recibos-lote-parcial.jpg)
+
+Desde Cobranzas abrí «Emitir recibos por lote», elegí octubre y cambié el vencimiento común al 30 de noviembre. Inicié la emisión con Enter. La pantalla mostró el progreso y deshabilitó las acciones incompatibles. Detuve el proceso después de la unidad en curso: quedaron un éxito, un fallo de almacenamiento y un pendiente.
+
+Recargué la página y abrí el lote desde el historial. «Continuar pendientes» procesó solo la unidad pendiente. Al retirar el fallo sintético, «Reintentar fallos» completó la unidad fallida. El resultado final conservó los otros recibos: intentos 1, 2 y 1, con tres versiones iniciales y sin duplicados.
+
+Preparé otro lote con motivo de regeneración. Simulé una respuesta perdida después de confirmar la primera unidad. La pantalla pidió actualizar; «Actualizar lote» recuperó el éxito guardado. Continuar emitió las otras dos unidades. La base conservó exactamente seis recibos: versiones 1 y 2 por cada unidad, con el vencimiento previsto. Las sumas de pendientes de cada lote coincidieron en 360.00 y las seis huellas SHA-256 coincidieron con los archivos aislados.
+
+Comprobé el foco en avisos, una vista de 390 × 844 sin desbordamiento y el mensaje de edificio sin periodos con cargos. El propietario vio sus dos versiones individuales y fue redirigido a su portal al abrir la ruta administrativa. La API verificó dos propietarios, denegó recibos ajenos y devolvió la descarga autorizada con los mismos bytes del archivo guardado. Rendericé y revisé las dos páginas del recibo de ejemplo emitido desde el lote.
+
+Retuve una tercera preparación con un bloqueo local y salí de la pantalla antes de recibir la respuesta. Al liberar el bloqueo, el lote quedó preparado con tres pendientes y cero intentos. Volví al historial y confirmé que salir durante la preparación no inició emisiones después: siguieron existiendo solo los seis recibos anteriores.
+
+La suite completa pasó con **191 pruebas** en PostgreSQL 17 aislado: diecisiete de lotes y una de su migración, además de las existentes. Ruff, formato, `alembic check` y `npm run build` fueron correctos. Las pruebas concurrentes confirmaron una sola preparación y una sola emisión ante solicitudes simultáneas. El fallo de base después de crear un recibo revierte también su resultado del lote.
+
+La prueba de migración sube desde 0015 con cargos, pagos, aplicaciones, vencimientos y un recibo previo; compara las tablas anteriores, comprueba las nuevas restricciones y protege el descenso con lotes.
+
+El 18 de noviembre de 2026 apliqué `0016_receipt_batches` en Neon por conexión directa, después de generar un respaldo completo en formato personalizado y comprobar que su índice fuera legible. Las huellas y cantidades de las veinte tablas anteriores coincidieron antes y después. La base quedó con veintitrés tablas, las dos nuevas vacías y `alembic check` sin diferencias. Quedan pendientes el permiso S3 para `receipts/` y el recorrido del flujo desplegado; esta migración no escribió archivos ni modificó permisos de almacenamiento.
