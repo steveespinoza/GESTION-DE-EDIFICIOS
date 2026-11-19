@@ -15,7 +15,7 @@ NS = {"s": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 
 
 class Spreadsheet:
-    def __init__(self, response):
+    def __init__(self, response, filename_prefix="transparencia"):
         assert response.status_code == 200, (
             response.text[:500] if response.status_code != 200 else ""
         )
@@ -26,7 +26,7 @@ class Spreadsheet:
         assert response.headers["cache-control"] == "no-store"
         assert response.headers["x-content-type-options"] == "nosniff"
         assert response.headers["content-disposition"].startswith(
-            'attachment; filename="transparencia-'
+            f'attachment; filename="{filename_prefix}-'
         )
         self.zip = ZipFile(BytesIO(response.content))
         strings = ET.fromstring(self.zip.read("xl/sharedStrings.xml"))

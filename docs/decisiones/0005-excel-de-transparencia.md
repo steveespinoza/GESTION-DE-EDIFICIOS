@@ -42,4 +42,4 @@ El backend genera el XLSX en memoria con una dependencia Python incluida en el a
 
 Las [pruebas de exportación](../../backend/tests/test_transparency.py) cubren reparto lineal de 100.00 entre tres unidades, parte común medida, divisor histórico, pagos parciales, crédito, ajustes con liberación y aplicaciones posteriores, acceso por rol y edificio, periodo vacío y textos con apariencia de fórmula. Las [pruebas del PDF](../../backend/tests/test_receipts.py) conservan su cobertura al compartir la selección de cargos del periodo.
 
-El [recorrido local](../verificacion.md#recorrido-del-excel-de-transparencia) documenta descarga, fórmulas, revisión visual e interfaz. Siguen pendientes el Excel mensual del edificio, el Excel de cobranzas, el PDF consolidado y la emisión por lote.
+El [recorrido local](../verificacion.md#recorrido-del-excel-de-transparencia) documenta descarga, fórmulas, revisión visual e interfaz. El [PDF consolidado](0006-pdf-consolidado-mensual.md), los [recibos por lote](0007-recibos-por-lote.md) y el [Excel mensual](0008-excel-mensual-del-edificio.md) tienen decisiones propias. Sigue pendiente el Excel histórico de cobranzas.

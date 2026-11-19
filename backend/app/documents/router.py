@@ -12,6 +12,8 @@ from app.documents import service
 from app.documents.consolidated_pdf import render_consolidation
 from app.documents.consolidation import read_consolidation
 from app.documents.excel import render_transparency
+from app.documents.monthly import read_monthly
+from app.documents.monthly_excel import render_monthly
 from app.documents.period import EmptyPeriod
 from app.documents.schemas import ReceiptDetail, ReceiptInput
 from app.documents.transparency import read_transparency
@@ -24,6 +26,31 @@ ADMIN_RECEIPTS = "/api/admin/buildings/{building_id}/units/{unit_id}/receipts"
 OWNER_RECEIPTS = "/api/owner/properties/{unit_id}/receipts"
 Year = Annotated[int, Query(ge=2020, le=9999)]
 Month = Annotated[int, Query(ge=1, le=12)]
+
+
+@router.get("/api/admin/buildings/{building_id}/monthly.xlsx")
+def admin_monthly(
+    building_id: UUID,
+    billing_year: Year,
+    billing_month: Month,
+    db: RequestSession,
+    _user: Admin,
+) -> Response:
+    try:
+        report = read_monthly(db, building_id, billing_year, billing_month)
+    except BuildingNotFound as error:
+        raise HTTPException(404, "Edificio no encontrado.") from error
+    except EmptyPeriod as error:
+        raise HTTPException(409, str(error)) from error
+    return Response(
+        content=render_monthly(report),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Disposition": f'attachment; filename="mensual-{billing_year}-{billing_month:02}-{building_id.hex[:8]}.xlsx"',
+        },
+    )
 
 
 @router.get("/api/admin/buildings/{building_id}/consolidation.pdf")
