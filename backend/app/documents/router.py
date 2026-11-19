@@ -9,6 +9,8 @@ from app.collections.router import Admin, Owner
 from app.collections.service import UnitNotFound
 from app.dependencies import RequestSession
 from app.documents import service
+from app.documents.collection_history import read_collection_history
+from app.documents.collection_history_excel import render_collection_history
 from app.documents.consolidated_pdf import render_consolidation
 from app.documents.consolidation import read_consolidation
 from app.documents.excel import render_transparency
@@ -26,6 +28,27 @@ ADMIN_RECEIPTS = "/api/admin/buildings/{building_id}/units/{unit_id}/receipts"
 OWNER_RECEIPTS = "/api/owner/properties/{unit_id}/receipts"
 Year = Annotated[int, Query(ge=2020, le=9999)]
 Month = Annotated[int, Query(ge=1, le=12)]
+
+
+@router.get("/api/admin/buildings/{building_id}/collections.xlsx")
+def admin_collection_history(
+    building_id: UUID, db: RequestSession, _user: Admin
+) -> Response:
+    try:
+        report = read_collection_history(db, building_id)
+    except BuildingNotFound as error:
+        raise HTTPException(404, "Edificio no encontrado.") from error
+    except EmptyPeriod as error:
+        raise HTTPException(409, str(error)) from error
+    return Response(
+        content=render_collection_history(report),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Disposition": f'attachment; filename="cobranzas-{building_id.hex[:8]}.xlsx"',
+        },
+    )
 
 
 @router.get("/api/admin/buildings/{building_id}/monthly.xlsx")

@@ -314,3 +314,23 @@ La suite completa pasó con **205 pruebas** en PostgreSQL 17 aislado, incluidas 
 Para reproducir, emitir servicios lineales y medidos en una base aislada, registrar pagos y ajustes y abrir Cobranzas. Elegir un periodo del Excel, descargar y contrastar unidades, servicios y saldos con el PDF y los estados de cuenta. Repetir con filtros activos, otro periodo y un edificio sin cargos.
 
 Esta entrega no requiere migración ni nuevas dependencias y no modifica Neon ni S3. Quedan pendientes la apertura en Microsoft Excel de escritorio y el recorrido desplegado; la revisión de cálculo y presentación se realizó con el lector independiente.
+
+## Recorrido del Excel histórico de cobranzas
+
+La [decisión del histórico](decisiones/0009-excel-historico-de-cobranzas.md) define las hojas por periodo, los saldos anteriores y su conciliación. La verificación local del 18 de noviembre de 2026 utilizó un edificio de tres unidades, cargos de agosto y octubre, pagos y un ajuste, dos propietarios y otro edificio sin cargos con crédito disponible.
+
+![Descarga del histórico completo con filtros de la lista activos](imagenes/excel-historico-cobranzas.jpg)
+
+Desde Cobranzas seleccioné agosto y «Solo deudas vencidas», dejando vacía la lista. Descargué el histórico con Enter: el archivo mantuvo todos los periodos y las tres unidades, y el aviso de éxito recibió foco. El archivo descargado contiene Resumen, Periodo 2026-10 y Periodo 2026-08.
+
+El resumen concilia 535.00 de cargos vigentes y 175.00 aplicados: pendiente total 360.00, igual que Cobranzas. Agosto conserva 295.00 de cargos, 120.00 aplicados y 175.00 pendientes. Octubre muestra 240.00, 55.00 y 185.00, respectivamente; agrega los 175.00 anteriores solo a su vista acumulada, que alcanza 360.00. El resumen suma 175.00 y 185.00, sin volver a sumar los anteriores.
+
+Recalculé el archivo descargado con un lector independiente y revisé visualmente sus tres hojas; no aparecieron errores de fórmula. En una copia en memoria cambié el cargo de agosto de una unidad de 95.00 a 100.00. El pendiente del resumen y el acumulado de octubre aumentaron a 365.00: el cambio se contó una sola vez. Conservé el archivo original sin esa modificación.
+
+Una demora sintética deshabilitó el botón. El error mostró un aviso con foco y, tras retirar el fallo, el reintento descargó el archivo correctamente. La vista de 390 × 844 no presentó desbordamiento horizontal. El edificio sin cargos mostró el estado vacío. El propietario fue redirigido a su portal al intentar abrir Cobranzas; la API denegó la descarga a dos propietarios y aisló los datos de ambos edificios.
+
+La suite completa pasó con **218 pruebas** en PostgreSQL 17 aislado, incluidas trece del histórico. Tras los ajustes finales de presentación, se repitieron las **47 pruebas** de histórico, Excel mensual y transparencia: todas aprobadas. Ruff, formato, `alembic check` y `npm run build` correctos. Los casos cubren cambio de año, meses sin cargos, unidades con solo saldo anterior, crédito separado y consumo posterior, ajustes con liberaciones, importes cero, texto literal, permisos y bloqueo de un pago concurrente durante las cuatro consultas.
+
+Para reproducir, emitir facturas en periodos separados y en dos años, registrar pagos y ajustes y abrir Cobranzas. Descargar el histórico y comparar el resumen con Cobranzas y cada acumulado con el Excel mensual. Repetir con filtros activos, un edificio sin cargos, un propietario y una falla de descarga.
+
+No se aplicaron migraciones ni cambios en Neon o S3. Quedan pendientes Microsoft Excel de escritorio y el recorrido desplegado; la validación de fórmulas y presentación se realizó con el lector independiente.
