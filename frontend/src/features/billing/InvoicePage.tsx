@@ -47,26 +47,23 @@ function InvoiceHistory({ buildingId }: { buildingId: string }) {
       {query.status === 'ready' && (
         <>
           <p>{query.data.building.name}</p>
-          <div className="building-grid">
-            <section className="building-surface" aria-labelledby="new-invoice-title">
+          <div className="invoice-workspace">
+            <details className="building-surface invoice-create"><summary>Registrar factura o consumo</summary><section aria-labelledby="new-invoice-title">
               <h2 id="new-invoice-title">Nueva factura</h2>
               {query.data.services.length > 0 ? (
                 <InvoiceForm buildingId={buildingId} categories={query.data.services} />
               ) : (
                 <p><Link to={`/admin/edificios/${buildingId}/servicios`}>Registra un servicio</Link> para facturarlo.</p>
               )}
-            </section>
+            </section></details>
             <section className="building-surface" aria-labelledby="history-title">
               <h2 id="history-title">Historial</h2>
               {query.data.invoices.length === 0 ? <p>Todavía no hay facturas registradas.</p> : (
-                <dl className="building-details">
+                <div className="table-scroll" role="region" aria-label="Historial de facturas" tabIndex={0}><table className="workspace-table"><thead><tr><th scope="col">Servicio y periodo</th><th scope="col" className="amount">Importe del proveedor</th></tr></thead><tbody>
                   {query.data.invoices.map((invoice) => (
-                    <div key={invoice.id}>
-                      <dt><Link to={`${invoicePath(buildingId)}/${invoice.id}`}>{invoice.category_name} · {period(invoice.billing_month, invoice.billing_year)}</Link></dt>
-                      <dd>{money(invoice.total_amount)}</dd>
-                    </div>
+                    <tr key={invoice.id}><th scope="row"><Link to={`${invoicePath(buildingId)}/${invoice.id}`}>{invoice.category_name} · {period(invoice.billing_month, invoice.billing_year)}</Link></th><td className="amount">{money(invoice.total_amount)}</td></tr>
                   ))}
-                </dl>
+                </tbody></table></div>
               )}
             </section>
           </div>

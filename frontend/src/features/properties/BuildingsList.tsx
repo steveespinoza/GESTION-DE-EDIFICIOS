@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 
 import { buildingErrorMessage, listBuildings } from './api'
 import { usePropertyQuery } from './usePropertyQuery'
+import { WorkspaceIcon } from './WorkspaceIcon'
 
 export function BuildingsList() {
   const { query, retry } = usePropertyQuery(listBuildings)
@@ -12,6 +13,7 @@ export function BuildingsList() {
         <h1 id="buildings-title">Edificios</h1>
         <Link className="button-link" to="edificios/nuevo">Nuevo edificio</Link>
       </div>
+      <p className="page-description">Selecciona un edificio para administrar sus unidades, servicios y cobranzas.</p>
       {query.status === 'loading' && <p role="status">Cargando edificios…</p>}
       {query.status === 'error' && (
         <div>
@@ -22,12 +24,14 @@ export function BuildingsList() {
       {query.status === 'ready' && (query.data.length === 0 ? (
         <p className="building-surface">Todavía no hay edificios registrados.</p>
       ) : (
-        <ul className="building-grid">
+        <ul className="building-grid building-hub-grid">
           {query.data.map((building) => (
-            <li className="building-surface" key={building.id}>
-              <h2><Link to={`edificios/${building.id}`}>{building.name}</Link></h2>
-              {building.address && <p>{building.address}</p>}
-              <p>Capacidad de {building.total_units} unidades</p>
+            <li key={building.id}>
+              <Link className="building-hub-card" to={`edificios/${building.id}`} aria-label={building.name}>
+                <span className="module-icon"><WorkspaceIcon name="building" /></span>
+                <div className="module-copy"><h2>{building.name}</h2><p>{building.address ?? 'Sin dirección registrada'}</p><span className="capacity-badge">Capacidad: {building.total_units} {building.total_units === 1 ? 'unidad' : 'unidades'}</span></div>
+                <WorkspaceIcon name="arrow" />
+              </Link>
             </li>
           ))}
         </ul>

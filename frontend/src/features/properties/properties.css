@@ -14,16 +14,16 @@
 
 .workspace-toolbar {
   padding-bottom: 1rem;
-  border-bottom: 1px solid #d9e2dc;
+  border-bottom: 1px solid var(--border);
 }
 
 .property-workspace a {
-  color: #176142;
+  color: var(--brand);
   text-underline-offset: 0.2em;
 }
 
 .property-workspace a:focus-visible {
-  outline: 3px solid #176142;
+  outline: 3px solid var(--brand);
   outline-offset: 3px;
 }
 
@@ -48,8 +48,8 @@
   min-height: 2.75rem;
   box-sizing: border-box;
   padding: 0.65rem 0.8rem;
-  border-radius: 0.4rem;
-  background: #15382e;
+  border-radius: var(--radius);
+  background: var(--brand);
   color: #fff;
   text-decoration: none;
 }
@@ -67,8 +67,8 @@
 .building-surface {
   min-width: 0;
   padding: clamp(1rem, 3vw, 1.5rem);
-  border: 1px solid #d9e2dc;
-  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   background: #fff;
   overflow-wrap: anywhere;
 }
@@ -173,8 +173,8 @@
   min-width: 0;
   min-height: 2.75rem;
   padding: 0.65rem 0.8rem;
-  border: 1px solid #81958a;
-  border-radius: 0.4rem;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius);
   background: #fff;
   color: inherit;
   font: inherit;
@@ -182,7 +182,7 @@
 
 .building-form select:focus-visible,
 .building-form textarea:focus-visible {
-  outline: 3px solid #176142;
+  outline: 3px solid var(--brand);
   outline-offset: 2px;
 }
 

@@ -9,6 +9,7 @@ import { DeadlineForm } from './DeadlineForm'
 import { ConsolidationPanel } from './ConsolidationPanel'
 import { MonthlyExcelPanel } from './MonthlyExcelPanel'
 import { CollectionHistoryPanel } from './CollectionHistoryPanel'
+import { CollectionPeriod } from './CollectionPeriod'
 import { money, periodLabel } from './format'
 import './collections.css'
 
@@ -22,21 +23,23 @@ function CollectionsContent({ buildingId, data, onSaved, refresh, saved }: { bui
   const period = periods.find(([key]) => key === deadlinePeriod)?.[1]
   const current = data.deadlines.find((item) => periodKey(item) === deadlinePeriod)
   const rows = data.rows.filter((row) => (!selected || periodKey(row) === selected) && (!overdueOnly || row.overdue_balance !== '0.00'))
+  const groups = [...new Set(rows.map(periodKey))].sort().reverse().map((key) => ({ key, rows: rows.filter((row) => periodKey(row) === key) }))
 
   return (
     <>
-      <section className="building-surface" aria-labelledby="collections-summary">
+      <section className="collection-overview" aria-labelledby="collections-summary">
         <h2 id="collections-summary">{data.building_name}</h2>
-        <dl className="building-details">
+        <dl className="building-details collection-metrics">
           <div><dt>Pendiente de todos los periodos</dt><dd>{money(data.balance)}</dd></div>
           <div><dt>De ese pendiente, vencido</dt><dd>{money(data.overdue_balance)}</dd></div>
         </dl>
         <p>Vencimientos al {data.as_of} (hora de Lima). El importe pasa a vencido al día siguiente de la fecha límite.</p>
         <p>Los arrastres conservan la fecha del cargo de origen. Los periodos sin fecha se muestran como «Sin vencimiento».</p>
       </section>
-      <ConsolidationPanel buildingId={buildingId} periods={data.rows} />
-      <MonthlyExcelPanel buildingId={buildingId} periods={data.rows} />
-      <CollectionHistoryPanel buildingId={buildingId} hasPeriods={data.rows.length > 0} />
+      <details className="reports-drawer building-surface">
+        <summary>Reportes y exportaciones<span>PDF consolidado · Excel mensual · Histórico de cobranzas</span></summary>
+        <div className="report-panels"><ConsolidationPanel buildingId={buildingId} periods={data.rows} /><MonthlyExcelPanel buildingId={buildingId} periods={data.rows} /><CollectionHistoryPanel buildingId={buildingId} hasPeriods={data.rows.length > 0} /></div>
+      </details>
       <div className="building-form collections-filters">
         <label>Filtrar por periodo<select value={selected} onChange={(event) => setSelected(event.target.value)}>
           <option value="">Todos los periodos</option>
@@ -47,27 +50,11 @@ function CollectionsContent({ buildingId, data, onSaved, refresh, saved }: { bui
       <section aria-labelledby="collections-list-title">
         <h2 id="collections-list-title">Cobranzas por unidad y periodo</h2>
         {rows.length === 0 ? <p role="status">No hay cobranzas con los filtros seleccionados.</p> : (
-          <ul className="building-grid">
-            {rows.map((row) => (
-              <li className="building-surface" key={`${row.unit_id}:${periodKey(row)}`}>
-                <h3>Unidad {row.unit_number} · {periodLabel(row)}</h3>
-                <dl className="building-details">
-                  <div><dt>Propietario</dt><dd>{row.owner_name}</dd></div>
-                  <div><dt>Importe vigente</dt><dd>{money(row.amount)}</dd></div>
-                  <div><dt>Aplicado</dt><dd>{money(row.applied)}</dd></div>
-                  <div><dt>Pendiente</dt><dd>{money(row.balance)}</dd></div>
-                  <div><dt>Vencido</dt><dd>{money(row.overdue_balance)}</dd></div>
-                  <div><dt>Fecha límite</dt><dd>{row.due_date ?? 'Sin vencimiento'}</dd></div>
-                  <div><dt>Estado</dt><dd>{row.balance === '0.00' ? 'Pagado' : row.overdue_balance !== '0.00' ? 'Vencido' : row.due_date ? 'Por vencer' : 'Sin vencimiento'}</dd></div>
-                </dl>
-                <p><Link to={`/admin/edificios/${buildingId}/unidades/${row.unit_id}/estado-de-cuenta`} aria-label={`Estado de cuenta de la unidad ${row.unit_number}, ${periodLabel(row)}`}>Estado de cuenta y pagos</Link></p>
-              </li>
-            ))}
-          </ul>
+          <div className="collection-periods">{groups.map((group, index) => <CollectionPeriod key={`${group.key}:${selected}:${overdueOnly}`} buildingId={buildingId} rows={group.rows} initialOpen={index === 0} />)}</div>
         )}
       </section>
       {period && (
-        <section className="building-surface" aria-labelledby="deadline-title">
+        <details className="deadline-drawer building-surface" open={Boolean(saved)}><summary>Configurar vencimientos</summary><section aria-labelledby="deadline-title">
           <h2 id="deadline-title">Registrar vencimiento</h2>
           <label className="building-form">Periodo del vencimiento<select value={deadlinePeriod} onChange={(event) => setDeadlinePeriod(event.target.value)}>
             {periods.map(([key, item]) => <option key={key} value={key}>{periodLabel(item)}</option>)}
@@ -80,7 +67,7 @@ function CollectionsContent({ buildingId, data, onSaved, refresh, saved }: { bui
             ))}
             {!current && <p>Todavía no se registró una fecha.</p>}
           </details>
-        </section>
+        </section></details>
       )}
     </>
   )
@@ -95,9 +82,7 @@ function CollectionsRecord({ buildingId }: { buildingId: string }) {
 
   return (
     <section className="building-page unit-statement" aria-labelledby="collections-title">
-      <Link to={`/admin/edificios/${buildingId}`}>Volver al edificio</Link>
-      <h1 id="collections-title">Cobranzas</h1>
-      <Link className="button-link" to={`/admin/edificios/${buildingId}/recibos-por-lote`}>Emitir recibos por lote</Link>
+      <div className="building-page-heading"><div><Link to={`/admin/edificios/${buildingId}`}>Volver al edificio</Link><h1 id="collections-title">Cobranzas</h1></div><Link className="button-link" to={`/admin/edificios/${buildingId}/recibos-por-lote`}>Emitir recibos por lote</Link></div>
       {saved && <p ref={notice} tabIndex={-1} role="status">Vencimiento de {periodLabel(saved)} registrado para {saved.due_date}.</p>}
       {query.status === 'loading' && <p role="status">Cargando cobranzas…</p>}
       {query.status === 'error' && <div><p role="alert">{query.error instanceof PropertyRequestError && query.error.status === 404 ? 'No se encontró el edificio.' : 'No se pudieron cargar las cobranzas.'}</p><button type="button" onClick={retry}>Volver a intentar</button></div>}

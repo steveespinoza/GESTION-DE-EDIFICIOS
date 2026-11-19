@@ -28,8 +28,17 @@ export function LoginForm({ onSignedIn }: LoginFormProps) {
   }
 
   return (
-    <section className="status-card" aria-labelledby="login-title">
+    <div className="login-layout">
+    <aside className="login-intro">
+      <span className="login-brand">Gestión de Edificios</span>
+      <div><p className="login-eyebrow">Administración inmobiliaria</p><h2>Tu edificio.<br />Todo en un solo lugar.</h2><p>Organiza tus unidades, servicios y cobranzas desde un mismo espacio de trabajo.</p><ul><li>Control de cargos, pagos y saldos.</li><li>Recibos y reportes por periodo.</li><li>Un portal para cada propietario.</li></ul></div>
+      <span className="login-footer">Edificios · Unidades · Servicios · Cobranzas</span>
+    </aside>
+    <section className="status-card login-card" aria-labelledby="login-title">
+      <span className="login-mobile-brand">Gestión de Edificios</span>
+      <p className="login-eyebrow">Bienvenido</p>
       <h1 id="login-title">Iniciar sesión</h1>
+      <p className="login-description">Ingresa con tu cuenta para acceder a tu espacio de trabajo.</p>
       <form className="login-form" onSubmit={handleSubmit} aria-busy={submitting}>
         <label htmlFor="username">Usuario</label>
         <input id="username" name="username" autoComplete="username" maxLength={100} required />
@@ -48,5 +57,6 @@ export function LoginForm({ onSignedIn }: LoginFormProps) {
         </button>
       </form>
     </section>
+    </div>
   )
 }

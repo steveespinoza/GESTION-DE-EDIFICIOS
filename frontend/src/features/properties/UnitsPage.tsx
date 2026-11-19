@@ -24,15 +24,13 @@ function UnitResults({ buildingId, filter }: { buildingId: string; filter: strin
   }
 
   return (
-    <ul className="building-grid">
+    <div className="table-scroll" role="region" aria-label="Listado de unidades" tabIndex={0}>
+      <table className="workspace-table"><thead><tr><th scope="col">Unidad</th><th scope="col">Propietario</th><th scope="col">Área</th><th scope="col">Acciones</th></tr></thead><tbody>
       {query.data.map((unit) => (
-        <li key={unit.id} className="building-surface">
-          <h2><Link to={`${unitsPath(buildingId)}/${unit.id}`}>Unidad {unit.number}</Link></h2>
-          <p>{unit.owner.full_name}</p>
-          <p>{unit.area_sqm} m²</p>
-        </li>
+        <tr key={unit.id}><th scope="row"><Link to={`${unitsPath(buildingId)}/${unit.id}`}>Unidad {unit.number}</Link></th><td>{unit.owner.full_name}</td><td className="amount">{unit.area_sqm} m²</td><td><Link to={`${unitsPath(buildingId)}/${unit.id}/estado-de-cuenta`} aria-label={`Estado de cuenta de la unidad ${unit.number}`}>Estado de cuenta</Link></td></tr>
       ))}
-    </ul>
+      </tbody></table>
+    </div>
   )
 }
 
