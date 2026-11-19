@@ -8,6 +8,7 @@ import { readCollections, type CollectionOverview, type Deadline } from './deadl
 import { DeadlineForm } from './DeadlineForm'
 import { ConsolidationPanel } from './ConsolidationPanel'
 import { MonthlyExcelPanel } from './MonthlyExcelPanel'
+import { CollectionHistoryPanel } from './CollectionHistoryPanel'
 import { money, periodLabel } from './format'
 import './collections.css'
 
@@ -35,6 +36,7 @@ function CollectionsContent({ buildingId, data, onSaved, refresh, saved }: { bui
       </section>
       <ConsolidationPanel buildingId={buildingId} periods={data.rows} />
       <MonthlyExcelPanel buildingId={buildingId} periods={data.rows} />
+      <CollectionHistoryPanel buildingId={buildingId} hasPeriods={data.rows.length > 0} />
       <div className="building-form collections-filters">
         <label>Filtrar por periodo<select value={selected} onChange={(event) => setSelected(event.target.value)}>
           <option value="">Todos los periodos</option>

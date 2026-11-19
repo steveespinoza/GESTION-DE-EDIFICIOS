@@ -103,3 +103,9 @@ Un reintento no regenera una unidad exitosa. Si cambian el vencimiento o la vers
 Desde Cobranzas, el SuperAdmin descarga el periodo elegido en tres hojas: consolidado de todas las unidades, matriz de parámetros y saldos por servicio, y detalle de lecturas y cargos. Los totales usan los mismos importes del PDF consolidado. Los filtros de la lista no recortan el archivo.
 
 El reparto original conserva sus unidades y céntimos; los ajustes y aplicaciones actuales aparecen separados. El pendiente incluye saldos anteriores una sola vez y mantiene el crédito actual separado. La [decisión del Excel mensual](decisiones/0008-excel-mensual-del-edificio.md) detalla alcance, fórmulas, permisos y operación. La descarga es directa y no requiere migración ni S3.
+
+## Excel histórico de cobranzas
+
+Desde Cobranzas, el SuperAdmin descarga el histórico completo con un resumen y una hoja por periodo registrado. Cada hoja distingue cargos propios, aplicaciones netas y pendiente, además del saldo anterior y el total hasta ese periodo. El resumen suma solo los saldos propios de cada mes; el crédito actual aparece separado. Los filtros de la lista no reducen el archivo.
+
+El histórico refleja movimientos vigentes, incluidos pagos y ajustes posteriores al mes. No reconstruye un cierre mensual. La [decisión del histórico](decisiones/0009-excel-historico-de-cobranzas.md) define periodos, cálculos, acceso y operación. La descarga no requiere migración ni S3.
