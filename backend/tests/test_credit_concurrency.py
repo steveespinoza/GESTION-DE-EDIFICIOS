@@ -30,7 +30,7 @@ from app.collections.models import (
 )
 from app.collections.schemas import PaymentInput
 from app.collections.service import read_statement, record_payment
-from app.documents.models import Receipt
+from app.documents.models import Receipt, ReceiptBatch, ReceiptBatchItem
 from app.documents.schemas import ReceiptInput
 from app.documents.service import ReceiptConflict, issue_receipt
 from app.identity.models import Account, RoleName
@@ -75,6 +75,15 @@ def committed_portfolio(engine, test_password_hash):
         yield building_id, owner_id, unit_id, categories
     finally:
         with Session(engine) as db, db.begin():
+            batch_ids = select(ReceiptBatch.id).where(
+                ReceiptBatch.building_id == building_id
+            )
+            db.execute(
+                delete(ReceiptBatchItem).where(ReceiptBatchItem.batch_id.in_(batch_ids))
+            )
+            db.execute(
+                delete(ReceiptBatch).where(ReceiptBatch.building_id == building_id)
+            )
             charges = select(UnitCharge.id).where(UnitCharge.unit_id == unit_id)
             payments = select(Payment.id).where(Payment.unit_id == unit_id)
             applications = select(PaymentApplication.id).where(

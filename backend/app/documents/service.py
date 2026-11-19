@@ -227,6 +227,26 @@ def issue_receipt(
     if building is None:
         raise UnitNotFound
     unit = unit_in_building(db, building_id, unit_id)
+    try:
+        result, created = stage_receipt(db, building, unit, actor_id, data, storage)
+        if created:
+            db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    return result, created
+
+
+def stage_receipt(
+    db: Session,
+    building: Building,
+    unit: Unit,
+    actor_id: UUID,
+    data: ReceiptInput,
+    storage: Callable[[], FileStorage],
+) -> tuple[ReceiptDetail, bool]:
+    """Caller holds the exclusive building lock; receipt and result commit together."""
+    unit_id = unit.id
     existing = db.scalar(
         select(Receipt).where(
             Receipt.unit_id == unit_id, Receipt.request_id == data.request_id
@@ -276,13 +296,7 @@ def issue_receipt(
         size_bytes=len(body),
         sha256=sha256(body).hexdigest(),
     )
-    try:
-        db.add(record)
-        db.flush()
-        storage().put(record.storage_key, body, "application/pdf")
-        result = detail(record)
-        db.commit()
-    except Exception:
-        db.rollback()
-        raise
-    return result, True
+    db.add(record)
+    db.flush()
+    storage().put(record.storage_key, body, "application/pdf")
+    return detail(record), True

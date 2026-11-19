@@ -91,3 +91,9 @@ Los importes reflejan los movimientos vigentes al descargar. El pendiente suma e
 Desde Cobranzas, el SuperAdmin descarga el reporte de un edificio y periodo con cargos. Incluye las facturas del proveedor y los importes vigentes por servicio, además de cargos, aplicaciones netas, saldos anteriores, pendiente, vencido y crédito por unidad. El selector del PDF define su periodo; los filtros de la lista de cobranzas no reducen el documento.
 
 El consolidado refleja movimientos vigentes al descargar, con el mismo alcance temporal del Excel por unidad. El crédito se muestra separado y los arrastres no duplican la deuda. Las unidades sin cargos del mes también aparecen. La [decisión del consolidado](decisiones/0006-pdf-consolidado-mensual.md) define cálculos, acceso administrativo y consistencia. La descarga es directa y no utiliza S3 ni crea una versión de recibo.
+
+## Recibos por lote
+
+Desde Cobranzas, el SuperAdmin prepara un lote con periodo, vencimiento común y motivo. La selección de unidades queda guardada. Cada unidad con cargos genera una versión nueva del recibo; las que no tienen cargos se identifican como omitidas. El resultado individual conserva lo emitido y permite continuar pendientes o reintentar fallos recuperables desde el historial.
+
+Un reintento no regenera una unidad exitosa. Si cambian el vencimiento o la versión individual antes de emitir una unidad pendiente, el resultado informa el conflicto y pide preparar otro lote. Cada PDF refleja el estado financiero de su momento de emisión. La [decisión de lotes](decisiones/0007-recibos-por-lote.md) define persistencia, transacciones, recuperación y operación de la migración 0016.

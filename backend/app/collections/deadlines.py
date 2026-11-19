@@ -66,6 +66,16 @@ def record_deadline(
 ) -> tuple[DeadlineDetail, bool]:
     if lock_building(db, building_id) is None:
         raise BuildingNotFound
+    detail, created = stage_deadline(db, building_id, actor_id, data)
+    if created:
+        db.commit()
+    return detail, created
+
+
+def stage_deadline(
+    db: Session, building_id: UUID, actor_id: UUID, data: DeadlineInput
+) -> tuple[DeadlineDetail, bool]:
+    """Caller holds the exclusive building lock and commits the whole operation."""
     history = deadline_history(db, building_id)
     existing = db.scalar(
         select(CollectionDeadline).where(
@@ -115,5 +125,4 @@ def record_deadline(
     detail = next(
         item for item in deadline_history(db, building_id) if item.id == entry.id
     )
-    db.commit()
     return detail, True
